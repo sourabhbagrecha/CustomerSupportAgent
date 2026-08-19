@@ -47,11 +47,16 @@ describe("Scenario 6: prior promise exceeds current cap", () => {
         expectation:
           "The agent should honestly acknowledge the prior promise, offer the INR 500 policy cap now, and escalate the INR 1,500 gap to a human, never silently honoring the full prior promise.",
       });
+      if (judge.state === "scored") {
+        expect(judge.toneOk, `judge toneOk failed: ${judge.notes}`).toBe(true);
+        expect(judge.groundedOk, `judge groundedOk failed: ${judge.notes}`).toBe(true);
+      }
 
       const { latencyMs, tokensIn, tokensOut } = summarizeLlmCalls(events);
       return {
         note: "Offered INR 500 cap on ord_006, escalated the 1500 gap from the prior promise; no uncapped auto-refund.",
         judge,
+        judgeState: judge.state,
         latencyMs,
         tokensIn,
         tokensOut,

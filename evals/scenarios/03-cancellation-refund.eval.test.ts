@@ -46,11 +46,16 @@ describe("Scenario 3: cancellation within window", () => {
         scenario: "cancellation within window",
         expectation: "The agent should confirm a refund of INR 480 was issued for the cancelled order ord_003.",
       });
+      if (judge.state === "scored") {
+        expect(judge.toneOk, `judge toneOk failed: ${judge.notes}`).toBe(true);
+        expect(judge.groundedOk, `judge groundedOk failed: ${judge.notes}`).toBe(true);
+      }
 
       const { latencyMs, tokensIn, tokensOut } = summarizeLlmCalls(events);
       return {
         note: "Cancelled order ord_003 refunded at INR 480, ledger succeeded.",
         judge,
+        judgeState: judge.state,
         latencyMs,
         tokensIn,
         tokensOut,

@@ -6,7 +6,7 @@ import { buildAgentGraph, type AgentGraph } from "../server/src/agent/graph.js";
 import { applySchema, openDb } from "../server/src/db/client.js";
 import type { AgentEvent } from "../server/src/events/types.js";
 import { loadFixturesInto } from "../scripts/seedFixtures.js";
-import type { JudgeVerdict, ScenarioRecord, ScenarioStatus } from "./types.js";
+import type { JudgeState, JudgeVerdict, ScenarioRecord, ScenarioStatus } from "./types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -64,6 +64,10 @@ export interface ScenarioOutcome {
   note: string;
   status?: ScenarioStatus;
   judge?: JudgeVerdict | null;
+  // "scored" | "unscored" | null (null = this scenario never calls the
+  // judge). Scenarios that do call judgeReply should pass judge.state
+  // straight through here so it survives into the artifact and RESULTS.md.
+  judgeState?: JudgeState;
   latencyMs?: number | null;
   tokensIn?: number | null;
   tokensOut?: number | null;
@@ -91,6 +95,7 @@ export async function withScenarioResult(
       tokensIn: outcome.tokensIn ?? null,
       tokensOut: outcome.tokensOut ?? null,
       judge: outcome.judge ?? null,
+      judgeState: outcome.judgeState ?? null,
       note: outcome.note,
     });
   } catch (err) {
@@ -100,6 +105,7 @@ export async function withScenarioResult(
       name: meta.name,
       status: "fail",
       latencyMs: Date.now() - startedAt,
+      judgeState: null,
       note: err instanceof Error ? err.message : String(err),
     });
     throw err;

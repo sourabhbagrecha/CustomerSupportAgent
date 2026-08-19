@@ -48,11 +48,16 @@ describe("Scenario 1: failed-delivery refund within window", () => {
         scenario: "failed-delivery refund within window",
         expectation: "The agent should confirm a refund of INR 450 was issued for order ord_001, calmly and honestly.",
       });
+      if (judge.state === "scored") {
+        expect(judge.toneOk, `judge toneOk failed: ${judge.notes}`).toBe(true);
+        expect(judge.groundedOk, `judge groundedOk failed: ${judge.notes}`).toBe(true);
+      }
 
       const { latencyMs, tokensIn, tokensOut } = summarizeLlmCalls(events);
       return {
         note: "Refund of INR 450 issued exactly once for ord_001, ledger status succeeded.",
         judge,
+        judgeState: judge.state,
         latencyMs,
         tokensIn,
         tokensOut,

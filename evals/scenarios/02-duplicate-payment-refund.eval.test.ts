@@ -48,11 +48,16 @@ describe("Scenario 2: duplicate payment detected", () => {
         scenario: "duplicate payment detected",
         expectation: "The agent should confirm the duplicate INR 350 charge on order ord_002 was refunded.",
       });
+      if (judge.state === "scored") {
+        expect(judge.toneOk, `judge toneOk failed: ${judge.notes}`).toBe(true);
+        expect(judge.groundedOk, `judge groundedOk failed: ${judge.notes}`).toBe(true);
+      }
 
       const { latencyMs, tokensIn, tokensOut } = summarizeLlmCalls(events);
       return {
         note: "Duplicate charge on ord_002 refunded exactly once at INR 350.",
         judge,
+        judgeState: judge.state,
         latencyMs,
         tokensIn,
         tokensOut,

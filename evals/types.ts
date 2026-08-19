@@ -5,11 +5,18 @@
 
 export type ScenarioStatus = "pass" | "fail" | "documented_red";
 
-export interface JudgeVerdict {
-  toneOk: boolean;
-  groundedOk: boolean;
-  notes: string;
-}
+// A judge call either produced a scored verdict or it did not run to
+// completion (missing env, network error, empty response, unparseable or
+// malformed JSON). Judge outages never fail the eval suite, but they must
+// stay visible rather than being silently treated as a pass: there is no
+// "neutral" verdict anymore, only scored or unscored.
+export type JudgeVerdict =
+  | { state: "scored"; toneOk: boolean; groundedOk: boolean; notes: string }
+  | { state: "unscored"; notes: string };
+
+// null means the scenario does not call the judge at all (most fault-injection
+// and guardrail scenarios have nothing free-text worth judging).
+export type JudgeState = "scored" | "unscored" | null;
 
 export interface ScenarioRecord {
   number: number;
@@ -20,5 +27,6 @@ export interface ScenarioRecord {
   tokensIn?: number | null;
   tokensOut?: number | null;
   judge?: JudgeVerdict | null;
+  judgeState: JudgeState;
   note: string;
 }
