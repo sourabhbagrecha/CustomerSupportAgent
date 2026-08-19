@@ -9,7 +9,7 @@ before that work began, kept afterwards as a record of what was decided and why.
 | [002-audit-view.md](002-audit-view.md) | Audit tab: cross-thread pending approvals queue and the action ledger | Delivered, partly superseded by 003 and 004 |
 | [003-human-decision-queue.md](003-human-decision-queue.md) | Escalations become explicit admin decisions: grant an exception or uphold a denial, with a remark and a customer chat notification | Delivered |
 | [004-decisions-leave-the-customer-chat.md](004-decisions-leave-the-customer-chat.md) | The chat pane stops being a decision surface: approve/reject lives only in the audit queue, the chat shows a read-only status strip | Delivered |
-| [005-hardening-ownership-atomicity-evals.md](005-hardening-ownership-atomicity-evals.md) | Ownership enforcement, approval atomicity, runtime output validation, the resolved-status fix, eval hardening, and light polish, from a claim-by-claim verified external review | Planned |
+| [005-hardening-ownership-atomicity-evals.md](005-hardening-ownership-atomicity-evals.md) | Ownership enforcement, approval atomicity, runtime output validation, the resolved-status fix, eval hardening, and light polish, from a claim-by-claim verified external review | Delivered |
 
 ## Conventions
 

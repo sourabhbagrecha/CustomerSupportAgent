@@ -1,6 +1,6 @@
 # 005: Hardening ownership, atomicity, and evals
 
-Status: planned, implementation starting now.
+Status: delivered (commits 41becec through fc89b8f on feat/audit-view). Two items were added during delivery that the plan did not foresee: loadContext now degrades per source on a transient support-API error instead of failing the turn (surfaced by scenario 18), and the context block carries today's date with system-prompt hard rule 8 requiring the policy verdict before any yes/no on eligibility (surfaced by scenario 10's ground-truth judge). Both went through the repeat-scenario protocol; see README "Known failure modes".
 
 ## Why
 
