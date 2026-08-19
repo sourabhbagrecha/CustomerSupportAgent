@@ -1,4 +1,9 @@
-# PLAN.md - Production-Ready Customer Support Agent
+# 001: Initial build, production-ready customer support agent
+
+> Status: delivered. Written before the build (milestones M0 to M6) and kept as a record of the reasoning.
+> This is not a to-do list and not the current-state document: everything here is built, and README.md is
+> authoritative for how the system actually works today. Some details below (the repository layout, the
+> optional Langfuse integration) were superseded during the build; the README records what shipped.
 
 A 24-hour build. The evaluator (a CTO) clones the repo and runs it themselves with their own OpenAI key. The README is the demo. Every decision below was made deliberately; do not silently deviate from it.
 

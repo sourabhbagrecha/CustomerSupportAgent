@@ -2,7 +2,6 @@
 
 A production-grade customer support agent (refunds, duplicate payments, failed deliveries, cancellations, compensation), built as a take-home for a CTO evaluator who clones the repo and runs it with their own OpenAI key. Judgment, reliability, evals, and observability are scored above feature count.
 
-The build is complete: all 15 eval scenarios pass, history is six milestone commits, and the demo runs from a fresh clone. Treat incoming work as changes to a finished system, not as remaining scope; the README records the current architecture, decisions, and assumptions.
 
 ## Non-negotiable invariants
 
@@ -33,6 +32,7 @@ The build is complete: all 15 eval scenarios pass, history is six milestone comm
 - Write unit tests only where logic is deterministic and load-bearing: policy engine verdicts, idempotency key derivation, ledger state transitions, reconciliation, retrieval ranking, policy.md/policy.json consistency. Do not unit-test the LLM; that is what the eval suite is for.
 - Every agent step, tool call, guardrail verdict, failover, and ledger transition emits an event (the `events` table in `server/src/db/schema.sql`) at the moment the code is written, never retrofitted. The trace panel consumes this stream.
 - When a requirement is ambiguous, choose the safer interpretation, implement it, and append the assumption to the README assumptions list in the same commit.
+- Plans live in `docs/plans`, one numbered file per body of work, written before that work starts and kept afterwards as a record of the reasoning. A new capability gets a new numbered file; never rewrite a delivered plan in place. Plans are never the current-state document: README.md is authoritative for how the system works today, and this file for the invariants a change must respect.
 - The dev servers are already running and stay running: the Fastify API on `http://localhost:3000` and the Vite frontend on `http://localhost:5173`. Use those; never start `npm run dev`, `npm run demo`, or any other server process yourself. If a port looks dead, say so and ask the user to restart it rather than launching one.
 - Frontend work: after any UI change, look at it with the playwright-cli skill (or `npx playwright`) against `http://localhost:5173` (the already-running dev server) before calling the change done. Check layout, console errors, and the actual flow being touched, not just that it builds. Keep iterating against the real render until it looks right.
 - Never commit `.env`, `data/*.db`, `dist/`, or `evals/.artifacts/`. All are gitignored; confirm with `git status --porcelain` before committing.
