@@ -33,7 +33,7 @@ const PROBES: Probe[] = [
     label: "vague compensation, expect one clarifying question",
     customerId: "cust_001",
     userMessage: "I'm not happy, can you do something for me?",
-    expected: "status resolved/open, zero ledger rows",
+    expected: "status waiting_for_customer, zero ledger rows",
   },
   {
     id: "06",

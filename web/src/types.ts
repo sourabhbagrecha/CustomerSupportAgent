@@ -96,7 +96,12 @@ export interface LedgerPage {
   offset: number;
 }
 
-export type ResolutionStatus = "open" | "resolved" | "escalated" | "awaiting_approval";
+export type ResolutionStatus =
+  | "open"
+  | "waiting_for_customer"
+  | "resolved"
+  | "escalated"
+  | "awaiting_approval";
 
 export interface ChatResponse {
   reply: string | null;

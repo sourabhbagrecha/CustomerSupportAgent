@@ -91,6 +91,21 @@ export function findLatestRefusalForThread(db: Database.Database, threadId: stri
   return row ? fromSql(row) : undefined;
 }
 
+// Used by graph.ts's status-transition rule: a thread only reaches
+// "resolved" once at least one of its ledger rows has hit a terminal
+// outcome (money moved, was denied, or failed unrecoverably). "pending" and
+// "awaiting_approval" are deliberately excluded, since neither is a
+// concrete outcome yet.
+export function hasTerminalLedgerRowForThread(db: Database.Database, threadId: string): boolean {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM actions_ledger
+        WHERE thread_id = ? AND status IN ('succeeded', 'reconciled', 'denied', 'failed_unknown')`,
+    )
+    .get(threadId) as { n: number };
+  return row.n > 0;
+}
+
 export interface LedgerListFilter {
   status?: LedgerStatus;
   threadId?: string;

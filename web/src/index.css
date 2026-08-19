@@ -198,6 +198,11 @@ body {
   color: #065f46;
 }
 
+.history-item-status-waiting_for_customer {
+  background: #eff4ff;
+  color: #1d4ed8;
+}
+
 .history-item-label {
   font-size: 11px;
   color: #8a919c;

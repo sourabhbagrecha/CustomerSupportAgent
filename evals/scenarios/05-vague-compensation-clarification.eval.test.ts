@@ -24,6 +24,7 @@ describe("Scenario 5: vague compensation request", () => {
       });
 
       expect(result.reply).toBeTruthy();
+      expect(result.status).toBe("waiting_for_customer");
 
       const events = listEventsForThread(db, threadId);
       const moneyToolCalls = events.filter(

@@ -5,11 +5,11 @@ import { getPendingApprovalForThread } from "../ledger/approvals.js";
 import type { AgentGraph } from "./graph.js";
 import { DEGRADED_REPLY_TEXT, recordDegradedEscalation } from "./degradedReply.js";
 import { ModelsUnavailable } from "./errors.js";
-import type { AgentState } from "./state.js";
+import type { AgentState, ResolutionStatus } from "./state.js";
 
 export interface RunTurnResult {
   reply: string | null;
-  status: "open" | "resolved" | "escalated" | "awaiting_approval";
+  status: ResolutionStatus;
   degraded: boolean;
 }
 

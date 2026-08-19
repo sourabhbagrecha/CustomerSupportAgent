@@ -4,11 +4,12 @@ import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { SystemMessage, ToolMessage, type AIMessage } from "@langchain/core/messages";
 import type Database from "better-sqlite3";
 import { emitEvent } from "../events/emitter.js";
+import { hasTerminalLedgerRowForThread } from "../ledger/store.js";
 import { AGENT_TOOLS } from "../tools/agentTools.js";
 import { callModelWithFailover } from "./modelClient.js";
 import { loadContext } from "./loadContext.js";
 import { SYSTEM_PROMPT } from "./prompt.js";
-import { AgentStateAnnotation, type AgentState } from "./state.js";
+import { AgentStateAnnotation, type AgentState, type ResolutionStatus } from "./state.js";
 
 const rawToolNode = new ToolNode(AGENT_TOOLS);
 
@@ -38,11 +39,32 @@ export function buildAgentGraph(db: Database.Database) {
     return { retrievedContextBlock };
   }
 
+  // Status rule: a thread only reaches "resolved" after a concrete ledger
+  // outcome. A reply with no tool calls just means the agent asked
+  // something or is waiting on the customer, not that anything was
+  // decided, so it moves to "waiting_for_customer" and only flips to
+  // "resolved" once a terminal ledger row (succeeded, reconciled, denied,
+  // or failed_unknown) exists for this thread. Both "open" and
+  // "waiting_for_customer" have to trigger this check, not just "open":
+  // resolutionStatus is checkpointed and persists across turns, and
+  // nothing else resets it, so gating on "open" alone would strand a
+  // thread in "waiting_for_customer" forever once it first landed there.
+  // Other statuses (escalated, awaiting_approval, resolved) pass through
+  // unchanged. Known limitation, accepted for the demo: this only checks
+  // whether a terminal ledger row exists on the thread at all, not whether
+  // it is recent, so a later, unrelated follow-up question on an
+  // already-resolved thread still reads "resolved" as soon as the agent
+  // replies without a new tool call.
+  function nextResolutionStatus(state: AgentState, aiMessage: unknown): ResolutionStatus {
+    const canTransition = state.resolutionStatus === "open" || state.resolutionStatus === "waiting_for_customer";
+    if (!canTransition || hasToolCalls(aiMessage)) return state.resolutionStatus;
+    return hasTerminalLedgerRowForThread(db, state.threadId) ? "resolved" : "waiting_for_customer";
+  }
+
   async function agentNode(state: AgentState) {
     const systemMessage = new SystemMessage(`${SYSTEM_PROMPT}\n\n${state.retrievedContextBlock}`);
     const aiMessage = await callModelWithFailover(db, state.threadId, [systemMessage, ...state.messages], AGENT_TOOLS);
-    const resolutionStatus =
-      state.resolutionStatus === "open" && !hasToolCalls(aiMessage) ? "resolved" : state.resolutionStatus;
+    const resolutionStatus = nextResolutionStatus(state, aiMessage);
     return { messages: [aiMessage], resolutionStatus };
   }
 

@@ -24,6 +24,7 @@ describe("Scenario 4: ambiguous multi-order clarification", () => {
       });
 
       expect(result.reply).toBeTruthy();
+      expect(result.status).toBe("waiting_for_customer");
 
       const events = listEventsForThread(db, threadId);
       const moneyToolCalls = events.filter(

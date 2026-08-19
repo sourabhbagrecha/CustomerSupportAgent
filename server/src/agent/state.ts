@@ -10,7 +10,12 @@ import type { BaseMessage } from "@langchain/core/messages";
 // Annotation.Root is the long-established, unaffected mechanism for graph
 // state; every value that crosses a tool boundary is still validated by a
 // real Zod schema (see tools/schemas.ts).
-export type ResolutionStatus = "open" | "resolved" | "escalated" | "awaiting_approval";
+export type ResolutionStatus =
+  | "open"
+  | "waiting_for_customer"
+  | "resolved"
+  | "escalated"
+  | "awaiting_approval";
 
 export const AgentStateAnnotation = Annotation.Root({
   messages: Annotation<BaseMessage[]>({

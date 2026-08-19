@@ -37,7 +37,7 @@ describe("Scenario 15: malformed_tool_args exercises the repair loop", () => {
       const snapshot = getSnapshot();
       expect(snapshot.malformed_tool_args).toBeUndefined();
 
-      expect(["resolved", "escalated", "awaiting_approval"]).toContain(result.status);
+      expect(["resolved", "waiting_for_customer", "escalated", "awaiting_approval"]).toContain(result.status);
 
       const stuckPending = db
         .prepare(`SELECT COUNT(*) AS n FROM actions_ledger WHERE thread_id = ? AND status = 'pending'`)
