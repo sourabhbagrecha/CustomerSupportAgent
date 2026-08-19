@@ -188,6 +188,7 @@ export async function runMoneyAction(
     actionType: input.actionType,
     orderId: input.orderId,
     amount: input.amount,
+    customerId: input.customerId,
   });
 
   emitEvent(db, {

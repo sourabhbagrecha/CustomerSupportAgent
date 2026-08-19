@@ -13,6 +13,7 @@ export type PolicyDocument = z.infer<typeof PolicyDocumentSchema>;
 
 export const PolicyDenyReasonSchema = z.enum([
   "order_not_found",
+  "order_not_owned_by_customer",
   "order_not_eligible_status",
   "outside_refund_window",
   "exceeds_refundable_amount",

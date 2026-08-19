@@ -195,6 +195,55 @@ describe("runMoneyAction", () => {
     expect(countPayments(db, "o6", "refund")).toBe(1);
   });
 
+  it("a foreign order denies with policyReason containing 'No order found', exactly one denied ledger row, and zero payments", async () => {
+    // o10 belongs to c1 (seedOrder always creates its order under customer
+    // c1); c2 is a different customer requesting a refund on it.
+    seedOrder(db, "o10", 300);
+    db.prepare(`INSERT INTO customers (id, name, email, phone, created_at) VALUES ('c2','Other','o@x.com',NULL,'2026-01-01')`).run();
+
+    const result = await runMoneyAction(db, POLICY, {
+      threadId: "t10",
+      customerId: "c2",
+      actionType: "refund",
+      orderId: "o10",
+      amount: 300,
+      reason: "test",
+    });
+
+    expect(result.status).toBe("denied");
+    if (result.status === "denied") {
+      expect(result.policyReason).toContain("No order found");
+    }
+    expect(countPayments(db, "o10", "refund")).toBe(0);
+    const ledgerRows = db.prepare(`SELECT status FROM actions_ledger WHERE thread_id = 't10'`).all() as { status: string }[];
+    expect(ledgerRows).toHaveLength(1);
+    expect(ledgerRows[0]?.status).toBe("denied");
+  });
+
+  it("a nonexistent order id denies rather than throwing, since the ledger FK on order_id was intentionally removed for exactly this", async () => {
+    db.prepare(`INSERT INTO customers (id, name, email, phone, created_at) VALUES ('c1','Test','t@x.com',NULL,'2026-01-01')`).run();
+
+    const result = await runMoneyAction(db, POLICY, {
+      threadId: "t11",
+      customerId: "c1",
+      actionType: "refund",
+      orderId: "does_not_exist",
+      amount: 100,
+      reason: "test",
+    });
+
+    expect(result.status).toBe("denied");
+    if (result.status === "denied") {
+      expect(result.policyReason).toContain("No order found");
+    }
+    const ledgerRows = db
+      .prepare(`SELECT status, order_id FROM actions_ledger WHERE thread_id = 't11'`)
+      .all() as Array<{ status: string; order_id: string | null }>;
+    expect(ledgerRows).toHaveLength(1);
+    expect(ledgerRows[0]?.status).toBe("denied");
+    expect(ledgerRows[0]?.order_id).toBe("does_not_exist");
+  });
+
   it("resolveRejectedAction denies without ever calling the mock API", () => {
     seedOrder(db, "o7", 5000);
     const ledgerRow = {

@@ -81,18 +81,21 @@ export type PolicyChunkHit = z.infer<typeof PolicyChunkHitSchema>;
 // Tool inputs (what the model is allowed to supply)
 // ---------------------------------------------------------------------------
 
-export const GetCustomerInputSchema = z.object({ customerId: z.string() });
-export const GetOrdersInputSchema = z.object({ customerId: z.string() });
+export const GetCustomerInputSchema = z.object({});
+export const GetOrdersInputSchema = z.object({});
 export const GetPaymentsInputSchema = z.object({ orderId: z.string() });
 export const GetConversationHistoryInputSchema = z.object({
-  customerId: z.string(),
   query: z.string().optional(),
 });
 export const SearchPolicyInputSchema = z.object({ query: z.string() });
 
-// customerId and threadId are NOT model-suppliable: they come from graph
-// state. idempotencyKey is NEVER model-suppliable: it is derived
-// deterministically by the ledger. This is what makes the money path
+// customerId and threadId are NEVER model-suppliable for ANY tool: they come
+// from graph state (runtimeState(runtime).customerId), not from tool input.
+// idempotencyKey is NEVER model-suppliable either: it is derived
+// deterministically by the ledger. get_payments still takes an orderId
+// because the model has to say which order it means, but the tool
+// implementation verifies that order belongs to the calling customer before
+// answering. This is what makes both the money path and the read path
 // jailbreak-proof regardless of what the model claims.
 export const IssueRefundInputSchema = z.object({
   orderId: z.string(),

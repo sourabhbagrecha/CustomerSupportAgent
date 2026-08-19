@@ -28,6 +28,20 @@ async function simulateCall(latencyRangeMs: [number, number] = [50, 200]): Promi
   }
 }
 
+// Ownership check shared by every code path that trusts a model-supplied
+// orderId: get_payments (agentTools.ts) checks it before answering, and the
+// money-movement insert path below checks it before writing a payment row,
+// as defense in depth above the policy engine's own check and the
+// payments_order_owner_guard / ledger_order_owner_guard triggers in
+// schema.sql. Returns false for a nonexistent order too, so callers cannot
+// distinguish "no such order" from "wrong customer" purely from this check.
+export function orderBelongsToCustomer(db: Database.Database, orderId: string, customerId: string): boolean {
+  const row = db.prepare(`SELECT customer_id FROM orders WHERE id = ?`).get(orderId) as
+    | { customer_id: string }
+    | undefined;
+  return row !== undefined && row.customer_id === customerId;
+}
+
 // ---------------------------------------------------------------------------
 // Read APIs
 // ---------------------------------------------------------------------------
@@ -252,6 +266,15 @@ async function issueMoneyMovement(
   if (existing) {
     await sleep(20 + Math.random() * 30);
     return existing;
+  }
+
+  // Defense in depth: the policy engine already checked ownership before
+  // this row was ever allowed to reach the mock API, so this should never
+  // trip. If it ever does (a bug upstream), fail with a readable message
+  // here rather than letting the payments_order_owner_guard trigger's raw
+  // SQLITE_CONSTRAINT_TRIGGER abort surface instead.
+  if (params.orderId && !orderBelongsToCustomer(db, params.orderId, params.customerId)) {
+    throw new Error(`Order ${params.orderId} does not belong to customer ${params.customerId}; refusing to move money.`);
   }
 
   await simulateCall();

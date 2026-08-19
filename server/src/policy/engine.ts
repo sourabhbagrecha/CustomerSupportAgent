@@ -6,6 +6,7 @@ export interface PolicyCheckInput {
   actionType: ActionType;
   orderId: string | null;
   amount: number;
+  customerId: string;
 }
 
 function loadOrder(db: Database.Database, orderId: string): Order | undefined {
@@ -68,6 +69,19 @@ export function evaluatePolicy(
     const order = loadOrder(db, input.orderId);
     if (!order) {
       return { verdict: "deny", denyReason: "order_not_found", reason: `No order found with id ${input.orderId}.` };
+    }
+
+    // Ownership check applies to any action type that carries an orderId,
+    // credits included. The reason text deliberately mirrors order_not_found
+    // ("No order found...") rather than confirming the order exists but
+    // belongs to someone else; only the denyReason code stays distinct, for
+    // the audit trail.
+    if (order.customerId !== input.customerId) {
+      return {
+        verdict: "deny",
+        denyReason: "order_not_owned_by_customer",
+        reason: `No order found with id ${input.orderId} for this customer.`,
+      };
     }
 
     if (input.actionType === "refund") {

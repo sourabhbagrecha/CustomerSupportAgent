@@ -50,6 +50,17 @@ CREATE TABLE payments (
 CREATE INDEX idx_payments_order ON payments(order_id);
 CREATE INDEX idx_payments_customer ON payments(customer_id);
 
+-- A CHECK constraint cannot reach across tables, so ownership (a payment's
+-- customer_id must match the order it is attached to) is enforced with a
+-- BEFORE INSERT trigger instead. This is the last line of defense behind the
+-- policy engine's own ownership check; it exists so a bug anywhere upstream
+-- still cannot write a payment row that crosses customers.
+CREATE TRIGGER payments_order_owner_guard BEFORE INSERT ON payments
+WHEN NEW.order_id IS NOT NULL AND (SELECT customer_id FROM orders WHERE id = NEW.order_id) IS NOT NEW.customer_id
+BEGIN
+  SELECT RAISE(ABORT, 'payments.customer_id does not own payments.order_id');
+END;
+
 -- ---------------------------------------------------------------------------
 -- Historical support conversations (fixture data used for retrieval)
 -- ---------------------------------------------------------------------------
@@ -166,7 +177,13 @@ CREATE TABLE actions_ledger (
   thread_id       TEXT NOT NULL,
   action_type     TEXT NOT NULL CHECK (action_type IN ('refund', 'credit')),
   customer_id     TEXT NOT NULL REFERENCES customers(id),
-  order_id        TEXT REFERENCES orders(id),
+  -- Deliberately NOT `REFERENCES orders(id)`: a denied row for
+  -- order_not_found records a model-supplied order_id that does not exist
+  -- by definition, so a foreign key here would abort the exact denial it is
+  -- meant to record. Existence and ownership for any row that could
+  -- actually move money are enforced by the policy engine before insert and
+  -- by ledger_order_owner_guard above, not by a schema-level FK.
+  order_id        TEXT,
   amount          REAL NOT NULL,
   currency        TEXT NOT NULL DEFAULT 'INR',
   status          TEXT NOT NULL CHECK (status IN (
@@ -182,6 +199,20 @@ CREATE TABLE actions_ledger (
 CREATE INDEX idx_ledger_thread ON actions_ledger(thread_id);
 CREATE INDEX idx_ledger_customer ON actions_ledger(customer_id);
 CREATE INDEX idx_ledger_order ON actions_ledger(order_id);
+
+-- Same cross-table ownership guard as payments_order_owner_guard above, for
+-- the ledger row itself: a CHECK constraint cannot reach across tables.
+-- Denied rows are exempt: a denied row IS the audit record of refusing
+-- exactly this mismatch (order not found, or order not owned by this
+-- customer), so it must be writable with whatever order_id the model
+-- supplied. No money ever moves on a denied row, so nothing unsafe is let
+-- through; only succeeded/pending/awaiting_approval/etc. rows, which
+-- precede or record an actual money movement, are guarded.
+CREATE TRIGGER ledger_order_owner_guard BEFORE INSERT ON actions_ledger
+WHEN NEW.status <> 'denied' AND NEW.order_id IS NOT NULL AND (SELECT customer_id FROM orders WHERE id = NEW.order_id) IS NOT NEW.customer_id
+BEGIN
+  SELECT RAISE(ABORT, 'actions_ledger.customer_id does not own actions_ledger.order_id');
+END;
 
 -- The admin decision queue. Two kinds share this table:
 --   'policy_approval': one row per `requires_approval` verdict. The graph
@@ -199,7 +230,11 @@ CREATE TABLE approvals (
   thread_id     TEXT NOT NULL,
   action_type   TEXT CHECK (action_type IN ('refund', 'credit')),
   customer_id   TEXT NOT NULL REFERENCES customers(id),
-  order_id      TEXT REFERENCES orders(id),
+  -- Deliberately NOT `REFERENCES orders(id)`, same reasoning as
+  -- actions_ledger.order_id above: an escalation row can be built from a
+  -- denied ledger row whose order_id never existed (an order_not_found
+  -- denial), and that escalation must still be recordable.
+  order_id      TEXT,
   amount        REAL,
   policy_reason TEXT NOT NULL,
   denial_reason TEXT,
@@ -209,7 +244,11 @@ CREATE TABLE approvals (
   status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at    TEXT NOT NULL,
   resolved_at   TEXT,
-  resolved_by   TEXT
+  resolved_by   TEXT,
+  -- Set when the post-decision execution (graph resume or ledger action plus
+  -- customer notice) completed. NULL on a resolved row means execution
+  -- crashed and the resolve endpoint may retry it.
+  executed_at   TEXT
 );
 
 CREATE INDEX idx_approvals_thread ON approvals(thread_id);
