@@ -160,3 +160,130 @@ export interface AgentEvent {
 // AgentStreamEvent). Ephemeral chat-streaming sugar, not part of the durable
 // AgentEvent trace above.
 export type AgentStreamEvent = { type: "start" } | { type: "delta"; text: string } | { type: "end" };
+
+// Mirrors server/src/evals/runRecord.ts (EvalScenarioSchema, EvalRunSchema)
+// and server/src/httpSchemas.ts (EvalRunRequestSchema) by hand: the web
+// tsconfig cannot import server code, so these are kept in lockstep manually
+// (plan 007). One eval run = one archived record under evals/runs/; this
+// replaces the single-snapshot evals/results.json shape the earlier draft
+// used, since GET /api/evals no longer exists.
+export type EvalScenarioStatus = "pass" | "fail" | "documented_red";
+export type EvalJudgeState = "scored" | "unscored" | null;
+
+export interface EvalScenario {
+  number: number;
+  name: string;
+  status: EvalScenarioStatus;
+  latencyMs: number | null;
+  tokensIn: number | null;
+  tokensOut: number | null;
+  notes: string[];
+  judgeNotes: string[];
+  judgeState: EvalJudgeState;
+}
+
+export type EvalRunSource = "cli" | "ui";
+export type EvalRunStatus = "running" | "completed" | "failed" | "cancelled";
+
+// No key field anywhere on purpose: keys live in the server's environment and
+// never reach a run record or the browser (see api.ts startEvalRun).
+export interface EvalRunProvider {
+  baseUrl: string;
+  primaryModel: string | null;
+  fallbackModel: string | null;
+  judgeModel: string | null;
+  judgeBaseUrl: string;
+}
+
+export interface EvalJudgeStates {
+  scored: number;
+  unscored: number;
+  notApplicable: number;
+}
+
+// Price snapshot taken when the run started (plan 008), from OpenRouter's
+// public model listing: USD per million tokens for the primary model. null
+// when the listing was unreachable or does not price that model, in which
+// case the cost column shows n/a rather than a guess.
+export interface EvalRunPricing {
+  source: "openrouter";
+  openrouterModelId: string;
+  promptUsdPerMillion: number;
+  completionUsdPerMillion: number;
+  fetchedAt: string;
+}
+
+export interface EvalRun {
+  schemaVersion: 1;
+  runId: string;
+  label: string;
+  source: EvalRunSource;
+  status: EvalRunStatus;
+  startedAt: string;
+  finishedAt: string | null;
+  durationMs: number | null;
+  exitCode: number | null;
+  // Set only when status is "failed" (the runner itself did not produce a
+  // suite result); null otherwise. Scenario-level failures live on the rows.
+  failureReason: string | null;
+  provider: EvalRunProvider;
+  // null = the full suite; otherwise the scenario numbers that were run.
+  scenarioFilter: number[] | null;
+  gitCommit: string | null;
+  promptSha256: string;
+  fixturesSha256: string;
+  judgeStates: EvalJudgeStates;
+  scenarios: EvalScenario[];
+  pricing: EvalRunPricing | null;
+}
+
+// GET /api/evals/config response.
+export interface EvalConfigDefaults {
+  baseUrl: string;
+  primaryModel: string;
+  fallbackModel: string;
+  apiKeyEnv: string;
+  judgeModel: string;
+  judgeBaseUrl: string;
+  judgeApiKeyEnv: string;
+}
+
+export interface EvalBaseUrlPreset {
+  label: string;
+  baseUrl: string;
+}
+
+export interface EvalScenarioListing {
+  number: number;
+  name: string;
+}
+
+export interface EvalConfig {
+  defaults: EvalConfigDefaults;
+  apiKeyEnvs: string[];
+  presets: EvalBaseUrlPreset[];
+  scenarios: EvalScenarioListing[];
+}
+
+// Body for POST /api/evals/runs, mirroring EvalRunRequestSchema. Every
+// optional field left out means "use the server's default resolution."
+export interface EvalRunRequest {
+  label?: string;
+  baseUrl: string;
+  primaryModel: string;
+  fallbackModel?: string;
+  apiKeyEnv?: string;
+  judgeModel?: string;
+  judgeBaseUrl?: string;
+  judgeApiKeyEnv?: string;
+  scenarios?: number[];
+}
+
+// GET /api/evals/current (and the 202 body POST /api/evals/runs returns): the
+// in-progress run's partial state plus the runner's log tail, or the route
+// returns { current: null } once nothing is running.
+export interface EvalCurrentRun {
+  run: EvalRun;
+  logTail: string[];
+  expectedScenarioCount: number;
+}

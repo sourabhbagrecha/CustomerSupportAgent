@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isHttpUrl } from "./agent/providerConfig.js";
 import { FaultNameSchema } from "./faults/types.js";
 import { LedgerStatusSchema } from "./ledger/store.js";
 
@@ -37,3 +38,31 @@ export const LedgerQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(100),
   offset: z.coerce.number().int().min(0).default(0),
 });
+
+// Body for POST /api/evals/runs (plan 007). Keys are referenced by the NAME
+// of an environment variable, never by value: the server resolves it from
+// its own process.env, so no secret crosses the wire in either direction.
+// Base URL shape is checked here; the trailing "/chat/completions" trim and
+// the judge defaults are applied by providerConfig in the route.
+const envVarName = z
+  .string()
+  .trim()
+  .regex(/^[A-Z][A-Z0-9_]*_API_KEY$/, "Key variable names must look like SOMETHING_API_KEY.");
+
+const httpUrl = z.string().trim().max(300).refine(isHttpUrl, "Base URL must be an absolute http(s) URL.");
+
+export const EvalRunRequestSchema = z.object({
+  label: z.string().trim().max(80).optional(),
+  baseUrl: httpUrl,
+  primaryModel: z.string().trim().min(1).max(120),
+  fallbackModel: z.string().trim().min(1).max(120).optional(),
+  apiKeyEnv: envVarName.default("OPENAI_API_KEY"),
+  judgeModel: z.string().trim().min(1).max(120).optional(),
+  judgeBaseUrl: httpUrl.optional(),
+  judgeApiKeyEnv: envVarName.optional(),
+  // Scenario numbers as listed in evals/scenarios/. Omitted = full suite;
+  // an empty list is a request to run nothing and is rejected.
+  scenarios: z.array(z.number().int().positive()).min(1).max(100).optional(),
+});
+
+export type EvalRunRequest = z.infer<typeof EvalRunRequestSchema>;

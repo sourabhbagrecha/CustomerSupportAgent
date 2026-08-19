@@ -26,7 +26,7 @@ A production-grade customer support agent (refunds, duplicate payments, failed d
 
 ## Workflow
 
-- `npm run eval` is the regression gate for any agent, prompt, policy, tool, or ledger change: run it before declaring the task done, and commit the regenerated `evals/RESULTS.md` alongside the code so the diff shows quality movement. Documentation-only or UI-only changes do not need it; say so rather than skipping silently.
+- `npm run eval` is the regression gate for any agent, prompt, policy, tool, or ledger change: run it before declaring the task done, and commit the regenerated `evals/RESULTS.md` (plus the run record it writes to `evals/runs/`) alongside the code so the diff shows quality movement. Documentation-only or UI-only changes do not need it; say so rather than skipping silently. Runs started from the Evals tab, and subset runs, only add a record under `evals/runs/`; they never rewrite the gate files.
 - `npm run test` and `npm run typecheck` must stay green on every change, including documentation-only ones.
 - A single green eval run is not evidence for a judgment call the model makes. When changing a prompt rule, replay the affected scenarios with `npx tsx scripts/repeat-scenario.ts <runs>` before trusting one pass.
 - Write unit tests only where logic is deterministic and load-bearing: policy engine verdicts, idempotency key derivation, ledger state transitions, reconciliation, retrieval ranking, policy.md/policy.json consistency. Do not unit-test the LLM; that is what the eval suite is for.
@@ -44,7 +44,7 @@ The long-running ones (`npm run dev`, `npm run demo`) are already up on ports 30
 - `npm run seed` : create `data/app.db` from `schema.sql` and load `/fixtures`.
 - `npm run dev` : Fastify under tsx watch plus the Vite dev server, concurrently (API on port 3000, frontend on port 5173). Already running; do not launch it.
 - `npm run demo` : build the web app, then serve API and static frontend from Fastify on port 3000. Already covered by the running servers; do not launch it.
-- `npm run eval` : run the Vitest eval suite and regenerate `evals/RESULTS.md` (real OpenAI calls, costs credit).
+- `npm run eval` : run the Vitest eval suite via `scripts/run-eval.ts`, write a run record to `evals/runs/`, and regenerate `evals/RESULTS.md` (real model calls, costs credit). `npx tsx scripts/run-eval.ts 14 18` runs only those scenario numbers (record only, no gate rewrite).
 - `npm run test` : deterministic unit tests only, no LLM calls.
 - `npm run typecheck` : `tsc --noEmit` over the server and web tsconfigs.
 - `npm run fixtures` : regenerate synthetic fixtures locally (developer-only; output is committed).

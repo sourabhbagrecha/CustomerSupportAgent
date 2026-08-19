@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApprovalResolveRequestSchema, LedgerQuerySchema } from "./httpSchemas.js";
+import { ApprovalResolveRequestSchema, EvalRunRequestSchema, LedgerQuerySchema } from "./httpSchemas.js";
 
 describe("LedgerQuerySchema", () => {
   it("applies defaults when the query string is empty", () => {
@@ -63,5 +63,44 @@ describe("ApprovalResolveRequestSchema", () => {
   it("rejects a remark over the length bound", () => {
     const parsed = ApprovalResolveRequestSchema.safeParse({ decision: "approve", remark: "x".repeat(501) });
     expect(parsed.success).toBe(false);
+  });
+});
+
+describe("EvalRunRequestSchema", () => {
+  it("accepts the minimal body and defaults the key variable", () => {
+    const parsed = EvalRunRequestSchema.parse({
+      baseUrl: "https://openrouter.ai/api/v1/chat/completions",
+      primaryModel: "vendor/model-a",
+    });
+    expect(parsed.apiKeyEnv).toBe("OPENAI_API_KEY");
+    expect(parsed.fallbackModel).toBeUndefined();
+    expect(parsed.scenarios).toBeUndefined();
+  });
+
+  it("rejects a relative base URL, a non *_API_KEY variable name, and an empty scenario subset", () => {
+    expect(EvalRunRequestSchema.safeParse({ baseUrl: "openrouter.ai/api/v1", primaryModel: "m" }).success).toBe(false);
+    expect(
+      EvalRunRequestSchema.safeParse({ baseUrl: "https://x.test/v1", primaryModel: "m", apiKeyEnv: "PATH" }).success,
+    ).toBe(false);
+    expect(
+      EvalRunRequestSchema.safeParse({ baseUrl: "https://x.test/v1", primaryModel: "m", apiKeyEnv: "sk-raw-key" }).success,
+    ).toBe(false);
+    expect(EvalRunRequestSchema.safeParse({ baseUrl: "https://x.test/v1", primaryModel: "m", scenarios: [] }).success).toBe(
+      false,
+    );
+    expect(EvalRunRequestSchema.safeParse({ baseUrl: "https://x.test/v1", primaryModel: "" }).success).toBe(false);
+  });
+
+  it("accepts a scenario subset and judge overrides", () => {
+    const parsed = EvalRunRequestSchema.parse({
+      baseUrl: "https://openrouter.ai/api/v1",
+      primaryModel: "vendor/model-a",
+      scenarios: [14, 18],
+      judgeModel: "judge-z",
+      judgeBaseUrl: "https://api.openai.com/v1",
+      judgeApiKeyEnv: "OPENAI_API_KEY",
+    });
+    expect(parsed.scenarios).toEqual([14, 18]);
+    expect(parsed.judgeModel).toBe("judge-z");
   });
 });

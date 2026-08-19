@@ -1,9 +1,14 @@
 import OpenAI from "openai";
+import { resolveJudgeProvider } from "../server/src/agent/providerConfig.js";
 import type { JudgeVerdict } from "./types.js";
 
 // Lightweight LLM-as-judge (PLAN Section 10). Uses the raw openai package
-// directly against FALLBACK_MODEL, temperature 0. Judge outages (missing
-// FALLBACK_MODEL, missing OPENAI_API_KEY, network error, empty response,
+// directly, temperature 0, against the judge provider resolved in
+// server/src/agent/providerConfig.ts: JUDGE_MODEL / JUDGE_BASE_URL /
+// JUDGE_API_KEY when set, else FALLBACK_MODEL on the agent's own endpoint and
+// key. Pinning the judge lets the agent under test move to another provider
+// while every run is still graded by the same model. Judge outages (missing
+// model, missing key, network error, empty response,
 // unparseable JSON, or a parseable-but-malformed response missing the
 // boolean keys) never fail the deterministic eval suite: per CLAUDE.md, a
 // judge outage must never fail the suite. But it is no longer silently
@@ -50,12 +55,13 @@ function parseVerdict(raw: string): JudgeVerdict {
 
 export async function judgeReply(replyText: string, context: JudgeContext): Promise<JudgeVerdict> {
   try {
-    const model = process.env.FALLBACK_MODEL;
-    if (!model) throw new Error("FALLBACK_MODEL is not set");
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
+    const provider = resolveJudgeProvider();
+    const model = provider.model;
+    if (!model) throw new Error("JUDGE_MODEL / FALLBACK_MODEL is not set");
+    const apiKey = provider.apiKey;
+    if (!apiKey) throw new Error("JUDGE_API_KEY / OPENAI_API_KEY is not set");
 
-    const client = new OpenAI({ apiKey });
+    const client = new OpenAI({ apiKey, baseURL: provider.baseUrl });
     const completion = await client.chat.completions.create({
       model,
       temperature: 0,

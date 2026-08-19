@@ -5,7 +5,10 @@ import { defineConfig } from "vitest/config";
 // policy.md/policy.json consistency. Never the LLM itself (that's evals/).
 export default defineConfig({
   test: {
-    include: ["server/src/**/*.test.ts"],
+    // web/ is included for its pure presentation math only (evalMath: pareto
+    // frontier, disagreement detection). No component or DOM tests live here;
+    // the environment stays "node" deliberately.
+    include: ["server/src/**/*.test.ts", "web/src/**/*.test.ts"],
     environment: "node",
   },
 });

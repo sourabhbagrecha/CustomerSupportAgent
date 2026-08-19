@@ -1,6 +1,10 @@
 import type {
   ApprovalRow,
   ChatResponse,
+  EvalConfig,
+  EvalCurrentRun,
+  EvalRun,
+  EvalRunRequest,
   FaultName,
   FaultsSnapshot,
   LedgerPage,
@@ -92,6 +96,38 @@ export function getLedger(params: {
   if (params.offset !== undefined) query.set("offset", String(params.offset));
   const suffix = query.toString();
   return request(suffix ? `/api/ledger?${suffix}` : "/api/ledger");
+}
+
+// Server-resolved defaults (models, base URL, judge), which env vars look
+// like API keys, base-URL presets, and the scenario catalogue for subset
+// runs. Read once by the launcher to seed its form.
+export function getEvalConfig(): Promise<EvalConfig> {
+  return request("/api/evals/config");
+}
+
+// The archive under evals/runs/, newest first.
+export function getEvalRuns(): Promise<{ runs: EvalRun[] }> {
+  return request("/api/evals/runs");
+}
+
+export function deleteEvalRun(runId: string): Promise<{ ok: true }> {
+  return request(`/api/evals/runs/${encodeURIComponent(runId)}`, { method: "DELETE" });
+}
+
+// Starts the real suite as a child process of the API server; costs model
+// credit. 409s (via ApiError) when a run is already in progress.
+export function startEvalRun(body: EvalRunRequest): Promise<{ current: EvalCurrentRun }> {
+  return request("/api/evals/runs", { method: "POST", body: JSON.stringify(body) });
+}
+
+// Polled every 2s while a run is active (see components/evals/RunLauncher.tsx);
+// resolves to { current: null } once nothing is running.
+export function getCurrentEvalRun(): Promise<{ current: EvalCurrentRun | null }> {
+  return request("/api/evals/current");
+}
+
+export function cancelEvalRun(): Promise<{ ok: true }> {
+  return request("/api/evals/current/cancel", { method: "POST" });
 }
 
 export function resolveApproval(

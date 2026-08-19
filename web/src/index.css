@@ -847,3 +847,1112 @@ body {
   background: #fff8e6;
   color: #92400e;
 }
+
+/* Evals view (plan 007: compare eval runs) */
+
+/* A scrolling page of stacked sections rather than a fixed-height grid, since
+   the launcher, archive table, and comparison all grow with their data. The
+   base .panel sets overflow-y:auto/min-height:0 for the fixed side-by-side
+   layouts elsewhere; that would clip these instead of letting the page
+   scroll, so it is overridden for every direct child here. */
+.evals-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.evals-page > .panel {
+  overflow: visible;
+  flex: none;
+}
+
+/* .ledger-table-wrap (reused here for the archive table, the summary table,
+   and the scenario matrix) is `flex: 1` by default so it fills a bounded
+   panel elsewhere in the app. These panels size to their content instead, and
+   a panel with two or more flex:1 siblings (the comparison panel has the
+   summary table, a caption, and the matrix) stretches every one of them to
+   match the tallest even though the container's own height is auto, which
+   opened a large blank gap between the summary table and the matrix. Content
+   sizing here, not flex-grow, is what these panels actually want. */
+.evals-page .ledger-table-wrap {
+  flex: none;
+  min-height: auto;
+}
+
+.evals-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.evals-panel-head h2 {
+  margin: 0;
+}
+
+/* Run launcher */
+
+.evals-launcher-details summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2563eb;
+  margin-bottom: 12px;
+}
+
+.evals-launcher-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.evals-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.evals-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #565f6d;
+}
+
+.evals-field input,
+.evals-field select {
+  padding: 7px 9px;
+  border: 1px solid #c7cbd1;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: #1c2128;
+  background: #ffffff;
+}
+
+.evals-field input:disabled,
+.evals-field select:disabled {
+  background: #f4f5f7;
+  color: #8a919c;
+}
+
+.evals-field-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: #8a919c;
+  font-style: italic;
+}
+
+.evals-subset-details summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #565f6d;
+}
+
+.evals-subset-caption {
+  font-weight: 400;
+  color: #8a919c;
+}
+
+.evals-scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 6px 12px;
+  margin-top: 8px;
+}
+
+.evals-scenario-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.evals-judge-block {
+  border: 1px dashed #c7cbd1;
+  background: #f8f9fb;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.evals-judge-line {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #565f6d;
+}
+
+.evals-launcher-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.evals-launcher-caption {
+  margin: 0;
+  font-size: 11px;
+  color: #8a919c;
+  font-style: italic;
+}
+
+.evals-notice {
+  margin-top: 12px;
+  background: #eff4ff;
+  border: 1px solid #dbeafe;
+  color: #1c2128;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+/* Progress strip: shown inside the launcher panel while a run is active,
+   regardless of whether the configuration <details> is expanded. */
+.evals-progress {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e2e4e8;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.evals-progress-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.evals-progress-count {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.evals-progress-elapsed {
+  font-size: 12px;
+  color: #8a919c;
+}
+
+/* Thin, rounded-end bar per the dataviz mark spec: a single fill growing
+   from a fixed baseline, never redrawn as a stack. */
+.evals-progress-bar-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #eef0f3;
+  overflow: hidden;
+}
+
+.evals-progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: #2563eb;
+  transition: width 0.3s ease;
+}
+
+.evals-progress-scenarios {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.evals-log-tail {
+  margin: 0;
+  padding: 8px 10px;
+  background: #1c2128;
+  color: #d8dbe0;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  max-height: 180px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Archived runs table */
+
+.evals-runs-table th,
+.evals-runs-table td {
+  vertical-align: middle;
+}
+
+.evals-run-row-selected {
+  background: #eff4ff;
+}
+
+.eval-run-label {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.eval-run-submeta {
+  margin-top: 2px;
+  font-size: 10px;
+  color: #8a919c;
+}
+
+.eval-run-failure-note {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #9b1c1c;
+}
+
+.eval-run-passcount-good {
+  color: #065f46;
+  font-weight: 700;
+}
+
+.eval-run-passcount-bad {
+  color: #9b1c1c;
+  font-weight: 700;
+}
+
+.eval-run-passcount-mixed {
+  color: #92400e;
+  font-weight: 700;
+}
+
+.eval-source-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: #eef0f3;
+  color: #565f6d;
+}
+
+.eval-source-badge-ui {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.eval-source-badge-cli {
+  background: #eef0f3;
+  color: #565f6d;
+}
+
+/* Status badges, shared pill styling for both scenario status (pass / fail /
+   documented red) and run status (completed / failed / cancelled / running).
+   The two vocabularies never collide (a run is never "pass"), so one set of
+   modifier classes covers both without a naming clash. */
+.eval-status-badge,
+.eval-judge-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: #eef0f3;
+  color: #565f6d;
+}
+
+.eval-status-badge-pass,
+.eval-status-badge-completed {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.eval-status-badge-fail,
+.eval-status-badge-failed {
+  background: #fde8e8;
+  color: #9b1c1c;
+}
+
+.eval-status-badge-documented_red,
+.eval-status-badge-cancelled {
+  background: #fff8e6;
+  color: #92400e;
+}
+
+.eval-status-badge-running {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.eval-status-badge-missing {
+  background: #eef0f3;
+  color: #8a919c;
+  font-style: italic;
+}
+
+.eval-judge-badge-scored {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.eval-judge-badge-unscored {
+  background: #fff8e6;
+  color: #92400e;
+}
+
+.eval-metric-cell {
+  min-width: 110px;
+}
+
+/* Thin bar, rounded ends, single baseline (dataviz mark spec); the value
+   text stays in text ink, never the bar's own hue. */
+.eval-bar-track {
+  display: block;
+  margin-top: 4px;
+  height: 5px;
+  border-radius: 3px;
+  background: #eef0f3;
+  overflow: hidden;
+}
+
+.eval-bar-fill {
+  display: block;
+  height: 100%;
+  background: #93c5fd;
+  border-radius: 3px;
+}
+
+.eval-notes-list {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  font-size: 11px;
+  color: #565f6d;
+}
+
+.eval-notes-list li {
+  margin-bottom: 2px;
+}
+
+.eval-judge-note {
+  color: #1e40af;
+}
+
+/* Delta chips: color carries direction (green = better, red = worse given
+   the row's own lower/higher-is-better rule), never a bare number, so the
+   reader never has to remember which way a metric is supposed to move. */
+.eval-delta {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.eval-delta-better {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.eval-delta-worse {
+  background: #fde8e8;
+  color: #9b1c1c;
+}
+
+.eval-delta-neutral {
+  background: #eef0f3;
+  color: #8a919c;
+}
+
+/* Comparison: summary block */
+
+.evals-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.evals-summary-table th,
+.evals-summary-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e4e8;
+  text-align: left;
+  vertical-align: top;
+}
+
+.evals-summary-row-label {
+  font-weight: 600;
+  color: #565f6d;
+  white-space: nowrap;
+}
+
+.evals-summary-cell {
+  min-width: 140px;
+}
+
+.evals-summary-value {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.evals-column-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.evals-column-header-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1c2128;
+}
+
+.evals-column-header-meta {
+  font-size: 11px;
+  color: #565f6d;
+  font-weight: 400;
+}
+
+.evals-column-header-host {
+  color: #8a919c;
+}
+
+.evals-baseline-tag {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #1c2128;
+  color: #ffffff;
+}
+
+.evals-baseline-button {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid #c7cbd1;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #565f6d;
+  cursor: pointer;
+}
+
+.evals-baseline-button:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+/* Comparison: scenario matrix */
+
+.evals-matrix-caption {
+  margin: 10px 0;
+  font-size: 11px;
+  color: #8a919c;
+}
+
+.evals-matrix-table {
+  min-width: 640px;
+}
+
+/* Fixed-ish width so the run columns, not the scenario name, take the
+   space as more runs are added; the name column only needs the longest
+   scenario slug. */
+.evals-matrix-name {
+  width: 240px;
+  min-width: 200px;
+  max-width: 280px;
+  font-weight: 500;
+}
+
+.evals-matrix-cell {
+  min-width: 150px;
+  border-left: 3px solid transparent;
+}
+
+.eval-matrix-regressed {
+  border-left-color: #e11d48;
+}
+
+.eval-matrix-improved {
+  border-left-color: #10b981;
+}
+
+.eval-matrix-differs {
+  border-left-color: #f0b429;
+}
+
+.evals-matrix-delta {
+  margin-top: 4px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.evals-matrix-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.evals-matrix-notes-run {
+  font-size: 11px;
+}
+
+.evals-matrix-notes-run strong {
+  font-size: 11px;
+  color: #1c2128;
+}
+
+/* <=760px: stack the field grid to one column, same breakpoint as the rest
+   of the app's responsive rules. The two table-wrap sections already scroll
+   horizontally on their own at any width. */
+@media (max-width: 760px) {
+  .evals-field-grid,
+  .evals-scenario-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .evals-page {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  /* The phone rule above caps every .panel at 60vh with its own scroll for
+     the console grid; the evals page scrolls as one column, so its panels
+     keep their full content height here (otherwise the launcher's Run
+     button ends up hidden inside a clipped card). */
+  .evals-page > .panel {
+    max-height: none;
+  }
+}
+
+/* Evals comparison visualisation (plan 009: scorecards, cost/quality chart,
+   scenario grid, with the two original tables kept as the table view). */
+
+.evals-panel-hint {
+  font-size: 11px;
+  color: #8a919c;
+}
+
+/* Segmented control, shared by the chart's x-axis switch and the scenario
+   grid's filter row. One row, above the thing it scopes, never inside it. */
+.evals-metric-switch {
+  display: inline-flex;
+  border: 1px solid #d8dbe0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.evals-metric-switch button {
+  border: none;
+  border-left: 1px solid #e3e6ea;
+  background: #ffffff;
+  color: #565f6d;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 11px;
+  cursor: pointer;
+}
+
+.evals-metric-switch button:first-child {
+  border-left: none;
+}
+
+.evals-metric-switch button:hover {
+  background: #f4f5f7;
+}
+
+.evals-metric-switch button.evals-metric-switch-active {
+  background: #eef4fd;
+  color: #1e40af;
+}
+
+/* Scorecards */
+
+.evals-scorecards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
+  gap: 12px;
+}
+
+.evals-scorecard {
+  border: 1px solid #e3e6ea;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.evals-scorecard-baseline {
+  border-color: #2a78d6;
+  background: #fbfdff;
+}
+
+.evals-scorecard-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.evals-scorecard-title {
+  font-size: 13px;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.evals-scorecard-tag {
+  flex: none;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #eef0f3;
+  color: #565f6d;
+}
+
+.evals-scorecard-tag-baseline {
+  background: #1c2128;
+  color: #ffffff;
+}
+
+.evals-scorecard-tag-best {
+  background: #e4f4e8;
+  color: #0b5e2a;
+}
+
+.evals-scorecard-model {
+  font-size: 11px;
+  color: #565f6d;
+  word-break: break-all;
+}
+
+.evals-scorecard-meta {
+  font-size: 11px;
+  color: #8a919c;
+  word-break: break-word;
+}
+
+/* The hero figure: same sans as everything else, proportional figures (this
+   number never has to line up with the one in the card beside it). */
+.evals-scorecard-hero {
+  margin-top: 8px;
+  font-size: 34px;
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.evals-scorecard-hero-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #565f6d;
+  margin-bottom: 8px;
+}
+
+.evals-scorecard-meter {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+  border-radius: 3px;
+  background: #eef0f3;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.evals-scorecard-meter span {
+  display: block;
+  min-width: 0;
+}
+
+.evals-meter-pass {
+  background: #0ca30c;
+}
+
+.evals-meter-red {
+  background: #fab219;
+}
+
+.evals-meter-fail {
+  background: #d03b3b;
+}
+
+.evals-scorecard-stats {
+  margin: 0 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.evals-scorecard-stats > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.evals-scorecard-stats dt {
+  color: #8a919c;
+}
+
+.evals-scorecard-stats dd {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: right;
+}
+
+.evals-scorecard-stat-value {
+  font-variant-numeric: tabular-nums;
+  color: #1c2128;
+}
+
+.evals-scorecard .evals-baseline-button {
+  margin-top: auto;
+}
+
+/* Cost/quality chart */
+
+.evals-chart-frame {
+  position: relative;
+  overflow-x: auto;
+}
+
+.evals-chart-point {
+  cursor: default;
+  outline: none;
+}
+
+.evals-chart-point:focus-visible circle:nth-of-type(1) {
+  stroke: #1c2128;
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+
+.evals-chart-tooltip,
+.evals-heatmap-tooltip {
+  position: absolute;
+  z-index: 20;
+  transform: translate(-50%, calc(-100% - 10px));
+  min-width: 168px;
+  max-width: 260px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #1c2128;
+  color: #ffffff;
+  font-size: 11px;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgba(11, 11, 11, 0.22);
+}
+
+/* Value leads, label follows: in a tooltip the reader already knows which
+   mark they are on and wants the number. */
+.evals-chart-tooltip-value {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.evals-chart-tooltip-label {
+  color: #c6ccd6;
+  margin-bottom: 5px;
+  word-break: break-word;
+}
+
+.evals-chart-tooltip-rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.evals-chart-tooltip-rows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.evals-chart-tooltip-rows dt {
+  color: #9aa3b0;
+}
+
+.evals-chart-tooltip-rows dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.evals-chart-tooltip-tag {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid #333b45;
+  color: #c6ccd6;
+}
+
+.evals-chart-legend,
+.evals-heatmap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #565f6d;
+}
+
+.evals-chart-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.evals-chart-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #8a919c;
+}
+
+/* Scenario grid */
+
+.evals-heatmap-frame {
+  position: relative;
+  overflow-x: auto;
+}
+
+.evals-heatmap-table {
+  border-collapse: separate;
+  /* The 2px gap between cells is the separator; heat cells never carry a
+     border of their own. */
+  border-spacing: 2px;
+  width: 100%;
+}
+
+.evals-heatmap-table thead th {
+  vertical-align: bottom;
+  padding: 0 4px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #565f6d;
+  text-align: center;
+  max-width: 132px;
+  word-break: break-word;
+}
+
+.evals-heatmap-corner {
+  text-align: left !important;
+  position: sticky;
+  left: 0;
+  background: #ffffff;
+  z-index: 2;
+  min-width: 220px;
+}
+
+.evals-heatmap-col-baseline {
+  color: #1c2128;
+}
+
+.evals-heatmap-col-tag {
+  display: block;
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8a919c;
+}
+
+.evals-heatmap-name {
+  position: sticky;
+  left: 0;
+  background: #ffffff;
+  z-index: 1;
+  text-align: left;
+  font-weight: 400;
+  padding: 0;
+  min-width: 220px;
+}
+
+.evals-heatmap-row-open .evals-heatmap-name {
+  background: #f7f8fa;
+}
+
+.evals-heatmap-name-button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 3px 6px 3px 0;
+  font: inherit;
+  font-size: 12px;
+  color: #1c2128;
+  text-align: left;
+  cursor: pointer;
+}
+
+.evals-heatmap-name-button:hover {
+  color: #1e40af;
+}
+
+.evals-heatmap-number {
+  flex: none;
+  min-width: 20px;
+  font-size: 11px;
+  color: #8a919c;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.evals-heatmap-caret {
+  flex: none;
+  color: #b3b9c2;
+  font-size: 10px;
+  line-height: 1;
+  transition: transform 0.12s ease;
+}
+
+.evals-heatmap-caret-open {
+  transform: rotate(90deg);
+  color: #565f6d;
+}
+
+.evals-heatmap-cell-wrap {
+  padding: 0;
+}
+
+/* Emphasis is deliberately asymmetric: a fail is a solid block, a pass is a
+   pale one, so a run's failures are what the eye lands on. Every cell carries
+   a glyph so status is never colour alone. */
+.evals-heatmap-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 44px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.evals-heatmap-legend .evals-heatmap-cell {
+  width: 22px;
+  min-width: 22px;
+  cursor: default;
+}
+
+.evals-heatmap-cell:focus-visible {
+  outline: 2px solid #1c2128;
+  outline-offset: 1px;
+}
+
+.evals-heatmap-cell-pass {
+  background: #dff3e6;
+  color: #0f7a3d;
+}
+
+.evals-heatmap-cell-fail {
+  background: #d03b3b;
+  color: #ffffff;
+}
+
+.evals-heatmap-cell-documented_red {
+  background: #fbe6b8;
+  color: #8a5300;
+}
+
+.evals-heatmap-cell-missing {
+  background: #f0f1f3;
+  color: #a3a9b3;
+}
+
+.evals-heatmap-detail-row > td {
+  padding: 4px 6px 10px;
+  background: #f7f8fa;
+  border-radius: 6px;
+}
+
+/* Table view */
+
+.evals-table-details {
+  border-top: 1px solid #e9ebef;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.evals-table-details > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #565f6d;
+  padding: 4px 0;
+}
+
+.evals-table-details > summary:hover {
+  color: #1e40af;
+}
+
+@media (max-width: 760px) {
+  .evals-scorecards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .evals-heatmap-corner,
+  .evals-heatmap-name {
+    min-width: 160px;
+  }
+}
+
+/* A run that covers fewer scenarios than the widest selected one: its pass
+   rate is not over the same suite, so the card says so rather than letting
+   16/16 read as the equal of 19/19. */
+.evals-scorecard-partial {
+  font-size: 10px;
+  line-height: 1.35;
+  color: #8a5300;
+  background: #fdf3e0;
+  border-radius: 4px;
+  padding: 4px 6px;
+  margin-bottom: 8px;
+}
+
+/* The tooltips are children of the panel, not of the scrolling plot/grid
+   frames, so they are never cropped by an overflow-x context. */
+.evals-chart-panel,
+.evals-heatmap-panel {
+  position: relative;
+}
+
+/* The expanded row carries one block per selected run; stacked they run to a
+   screen and a half with six runs selected, so they wrap into columns. */
+.evals-heatmap-detail-row .evals-matrix-notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px 20px;
+  align-items: start;
+}

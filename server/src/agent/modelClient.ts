@@ -5,6 +5,7 @@ import type Database from "better-sqlite3";
 import { consumeFault, isFaultActive } from "../faults/registry.js";
 import { emitEvent, publishStreamEvent } from "../events/emitter.js";
 import { ModelsUnavailable } from "./errors.js";
+import { resolveAgentProvider } from "./providerConfig.js";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_RETRIES_PER_MODEL = 2; // up to 2 retries (3 attempts total) before failing over
@@ -46,13 +47,20 @@ function checkModelFault(role: "primary" | "fallback"): void {
   }
 }
 
+// Endpoint and key come from providerConfig (OPENAI_API_KEY, optional
+// OPENAI_BASE_URL), so any OpenAI-compatible chat-completions provider can
+// stand in without a code change. The baseURL is always passed explicitly
+// rather than left to the SDK's own env lookup, so what the trace records
+// and what the request hits are resolved in one place.
 function buildClient(model: string): ChatOpenAI {
+  const provider = resolveAgentProvider();
   return new ChatOpenAI({
     model,
     temperature: 0,
     timeout: REQUEST_TIMEOUT_MS,
     maxRetries: 0, // retry/backoff is owned by this wrapper, not the SDK
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: provider.apiKey,
+    configuration: { baseURL: provider.baseUrl },
     streamUsage: true, // keep tokensIn/tokensOut populated on the streamed result
   });
 }
@@ -165,8 +173,7 @@ export async function callModelWithFailover(
   messages: BaseMessage[],
   tools: StructuredToolInterface[],
 ): Promise<AIMessage> {
-  const primaryModel = process.env.PRIMARY_MODEL;
-  const fallbackModel = process.env.FALLBACK_MODEL;
+  const { primaryModel, fallbackModel } = resolveAgentProvider();
   if (!primaryModel || !fallbackModel) {
     throw new Error("PRIMARY_MODEL and FALLBACK_MODEL must be set (see .env.example).");
   }

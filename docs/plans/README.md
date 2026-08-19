@@ -11,6 +11,9 @@ before that work began, kept afterwards as a record of what was decided and why.
 | [004-decisions-leave-the-customer-chat.md](004-decisions-leave-the-customer-chat.md) | The chat pane stops being a decision surface: approve/reject lives only in the audit queue, the chat shows a read-only status strip | Delivered |
 | [005-hardening-ownership-atomicity-evals.md](005-hardening-ownership-atomicity-evals.md) | Ownership enforcement, approval atomicity, runtime output validation, the resolved-status fix, eval hardening, and light polish, from a claim-by-claim verified external review | Delivered |
 | [006-credit-bound-in-policy-engine.md](006-credit-bound-in-policy-engine.md) | Policy engine bounds credits by the order's creditable balance and routes orderless credits to approval | Delivered |
+| [007-model-comparison-eval-runs.md](007-model-comparison-eval-runs.md) | Archived eval runs, configurable model provider (base URL, held-constant judge), runs started from the UI, side-by-side comparison | Delivered |
+| [008-eval-run-cost.md](008-eval-run-cost.md) | Dollar cost per eval run and per scenario, priced from OpenRouter's public model listing and snapshotted into the run record | Delivered |
+| [009-eval-comparison-visualisation.md](009-eval-comparison-visualisation.md) | The eval comparison as scorecards, a cost/quality Pareto chart, and a scenario grid, with the original tables kept as the table view | Delivered |
 
 ## Conventions
 

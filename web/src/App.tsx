@@ -12,6 +12,7 @@ import {
 } from "./api";
 import { AuditPanel } from "./components/AuditPanel";
 import { Chat } from "./components/Chat";
+import { EvalsPanel } from "./components/EvalsPanel";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { PersonaPanel } from "./components/PersonaPanel";
 import { TracePanel } from "./components/TracePanel";
@@ -31,7 +32,7 @@ function messageFrom(err: unknown, fallback: string): string {
 }
 
 export function App() {
-  const [tab, setTab] = useState<"console" | "audit">("console");
+  const [tab, setTab] = useState<"console" | "audit" | "evals">("console");
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [faults, setFaults] = useState<FaultsSnapshot>({});
   const [faultsBusy, setFaultsBusy] = useState(false);
@@ -221,6 +222,15 @@ export function App() {
           >
             Audit
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "evals"}
+            className={`app-tab${tab === "evals" ? " app-tab-active" : ""}`}
+            onClick={() => setTab("evals")}
+          >
+            Evals
+          </button>
         </nav>
       </header>
       {loadError && <div className="inline-error app-load-error">{loadError}</div>}
@@ -257,8 +267,10 @@ export function App() {
           />
           <TracePanel events={events} />
         </div>
-      ) : (
+      ) : tab === "audit" ? (
         <AuditPanel onResolved={handleAuditResolved} />
+      ) : (
+        <EvalsPanel />
       )}
     </div>
   );

@@ -15,6 +15,15 @@ import { runTurn, resumeApprovalTurn, type RunTurnResult } from "./agent/runTurn
 import type { AgentState } from "./agent/state.js";
 import { getDb } from "./db/client.js";
 import { emitEvent, listEventsForThread, subscribe, subscribeStream } from "./events/emitter.js";
+import {
+  BASE_URL_PRESETS,
+  listApiKeyEnvNames,
+  normalizeBaseUrl,
+  resolveAgentProvider,
+  resolveJudgeProvider,
+} from "./agent/providerConfig.js";
+import { deleteRun, isValidRunId, listRuns, listScenarioFiles, readRun } from "./evals/runRecord.js";
+import { EvalRunInProgressError, getCurrentRun, startEvalRun, type EvalRunHandle } from "./evals/runner.js";
 import { clearAllFaults, getSnapshot, setFault } from "./faults/registry.js";
 import {
   getApprovalById,
@@ -29,6 +38,7 @@ import { countLedgerRows, getLedgerById, listLedgerRows } from "./ledger/store.j
 import {
   ApprovalResolveRequestSchema,
   ChatRequestSchema,
+  EvalRunRequestSchema,
   FaultRequestSchema,
   LedgerQuerySchema,
 } from "./httpSchemas.js";
@@ -50,6 +60,126 @@ if (existsSync(WEB_DIST)) {
 }
 
 app.get("/api/health", async () => ({ ok: true }));
+
+// ---------------------------------------------------------------------------
+// Eval runs (plan 007). The archive under evals/runs/ is read-only here
+// except for DELETE; POST /api/evals/runs starts the same vitest suite
+// `npm run eval` runs, as a child process with the chosen provider in its
+// environment. API keys are referenced by env var name and resolved
+// server-side; no key is ever read from or written to a request or a record.
+// ---------------------------------------------------------------------------
+
+function currentRunView(handle: EvalRunHandle | null) {
+  if (!handle) return null;
+  return { run: handle.run, logTail: handle.logTail.slice(-60), expectedScenarioCount: handle.expectedScenarioCount };
+}
+
+app.get("/api/evals/config", async () => {
+  const agent = resolveAgentProvider();
+  const judge = resolveJudgeProvider();
+  return {
+    defaults: {
+      baseUrl: agent.baseUrl,
+      primaryModel: agent.primaryModel ?? "",
+      fallbackModel: agent.fallbackModel ?? "",
+      apiKeyEnv: "OPENAI_API_KEY",
+      judgeModel: judge.model ?? "",
+      judgeBaseUrl: judge.baseUrl,
+      judgeApiKeyEnv: process.env.JUDGE_API_KEY ? "JUDGE_API_KEY" : "OPENAI_API_KEY",
+    },
+    apiKeyEnvs: listApiKeyEnvNames(),
+    presets: BASE_URL_PRESETS,
+    scenarios: listScenarioFiles().map((s) => ({ number: s.number, name: s.name })),
+  };
+});
+
+app.get("/api/evals/runs", async (request) => {
+  const { runs, invalid } = listRuns();
+  if (invalid.length > 0) request.log.warn({ invalid }, "evals/runs contains files that do not match the run schema");
+  return { runs };
+});
+
+app.get<{ Params: { runId: string } }>("/api/evals/runs/:runId", async (request, reply) => {
+  const run = readRun(request.params.runId);
+  if (!run) return reply.code(404).send({ error: "No such eval run." });
+  return { run };
+});
+
+app.delete<{ Params: { runId: string } }>("/api/evals/runs/:runId", async (request, reply) => {
+  const { runId } = request.params;
+  if (!isValidRunId(runId)) return reply.code(400).send({ error: "Invalid run id." });
+  if (!deleteRun(runId)) return reply.code(404).send({ error: "No such eval run." });
+  return { ok: true };
+});
+
+app.post("/api/evals/runs", async (request, reply) => {
+  const parsed = EvalRunRequestSchema.safeParse(request.body);
+  if (!parsed.success) return reply.code(400).send({ error: parsed.error.message });
+  const body = parsed.data;
+
+  const availableKeys = listApiKeyEnvNames();
+  const apiKeyEnv = body.apiKeyEnv;
+  if (!availableKeys.includes(apiKeyEnv)) {
+    return reply.code(400).send({ error: `${apiKeyEnv} is not set in the server's environment (.env).` });
+  }
+  const serverJudge = resolveJudgeProvider();
+  // The judge defaults to whatever this server's own env resolves (normally
+  // FALLBACK_MODEL on OPENAI_API_KEY), not to the run's provider, so a run
+  // against another provider is still graded by the same model as the rest
+  // of the archive unless the operator overrides it on purpose.
+  const judgeApiKeyEnv = body.judgeApiKeyEnv ?? (process.env.JUDGE_API_KEY ? "JUDGE_API_KEY" : "OPENAI_API_KEY");
+  const judgeApiKey = process.env[judgeApiKeyEnv];
+  if (!judgeApiKey) {
+    return reply.code(400).send({ error: `${judgeApiKeyEnv} is not set in the server's environment (.env).` });
+  }
+  const catalogue = listScenarioFiles();
+  const unknown = (body.scenarios ?? []).filter((n) => !catalogue.some((s) => s.number === n));
+  if (unknown.length > 0) {
+    return reply.code(400).send({ error: `Unknown scenario number(s): ${unknown.join(", ")}.` });
+  }
+
+  const baseUrl = normalizeBaseUrl(body.baseUrl);
+  const primaryModel = body.primaryModel;
+  const fallbackModel = body.fallbackModel ?? body.primaryModel;
+  const judgeModel = body.judgeModel ?? serverJudge.model ?? fallbackModel;
+  const judgeBaseUrl = body.judgeBaseUrl ? normalizeBaseUrl(body.judgeBaseUrl) : serverJudge.baseUrl;
+  const label = body.label && body.label.length > 0 ? body.label : primaryModel;
+
+  try {
+    const handle = startEvalRun({
+      label,
+      source: "ui",
+      scenarioNumbers: body.scenarios ?? null,
+      envOverrides: {
+        OPENAI_API_KEY: process.env[apiKeyEnv] ?? "",
+        OPENAI_BASE_URL: baseUrl,
+        PRIMARY_MODEL: primaryModel,
+        FALLBACK_MODEL: fallbackModel,
+        JUDGE_MODEL: judgeModel,
+        JUDGE_BASE_URL: judgeBaseUrl,
+        JUDGE_API_KEY: judgeApiKey,
+      },
+      provider: { baseUrl, primaryModel, fallbackModel, judgeModel, judgeBaseUrl },
+      stdio: "pipe",
+      writeLegacy: false,
+    });
+    request.log.info({ runId: handle.run.runId, baseUrl, primaryModel, scenarios: body.scenarios ?? "all" }, "eval run started");
+    return reply.code(202).send({ current: currentRunView(handle) });
+  } catch (err) {
+    if (err instanceof EvalRunInProgressError) return reply.code(409).send({ error: err.message });
+    request.log.error(err);
+    return reply.code(500).send({ error: err instanceof Error ? err.message : "Failed to start eval run." });
+  }
+});
+
+app.get("/api/evals/current", async () => ({ current: currentRunView(getCurrentRun()) }));
+
+app.post("/api/evals/current/cancel", async (_request, reply) => {
+  const handle = getCurrentRun();
+  if (!handle) return reply.code(404).send({ error: "No eval run is in progress." });
+  handle.cancel();
+  return { ok: true };
+});
 
 app.get("/api/personas", async () => ({ personas: DEMO_PERSONAS }));
 

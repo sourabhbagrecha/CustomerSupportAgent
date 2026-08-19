@@ -10,7 +10,7 @@
     "dev": "concurrently -k -n server,web -c blue,green \"tsx watch server/src/index.ts\" \"vite\"",
     "build:web": "vite build",
     "demo": "npm run build:web && cross-env NODE_ENV=production tsx server/src/index.ts",
-    "eval": "vitest run --config vitest.eval.config.ts; ec=$?; tsx scripts/export-results.ts; exit $ec",
+    "eval": "tsx scripts/run-eval.ts",
     "test": "vitest run --config vitest.unit.config.ts",
     "typecheck": "tsc --noEmit -p server/tsconfig.json && tsc --noEmit -p web/tsconfig.json"
   },
