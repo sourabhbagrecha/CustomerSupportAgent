@@ -1,0 +1,15 @@
+node_modules/
+dist/
+data/*.db
+data/*.db-shm
+data/*.db-wal
+.env
+.env.local
+*.log
+.DS_Store
+graphify-out/
+evals/.artifacts/
+.playwright-cli/
+.playwright/
+.vscode/
+.claude/
