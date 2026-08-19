@@ -1,0 +1,11 @@
+{
+  "maxAutoRefundINR": 500,
+  "maxAutoCreditINR": 500,
+  "refundWindowDays": 30,
+  "eligibleOrderStatusesForRefund": [
+    "delivered",
+    "failed_delivery",
+    "cancelled",
+    "partially_refunded"
+  ]
+}

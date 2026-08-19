@@ -1,0 +1,2812 @@
+[
+  {
+    "conversationId": "conv_ananya_001",
+    "customerId": "cust_001",
+    "orderId": null,
+    "date": "2026-07-09T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked for a tracking update on a shipment that had not updated in a couple of days."
+  },
+  {
+    "conversationId": "conv_arjun_001",
+    "customerId": "cust_006",
+    "orderId": "ord_006",
+    "date": "2026-07-31T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "product_defect"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Agent promised a ₹2,000 refund after the AC repair kit malfunctioned; awaiting supervisor processing."
+  },
+  {
+    "conversationId": "conv_divya_001",
+    "customerId": "cust_007",
+    "orderId": "ord_007",
+    "date": "2026-08-10T19:38:02.155Z",
+    "topicTags": [
+      "product_defect",
+      "packaging"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer reported the refrigerator arrived dented; agent said a replacement was scheduled."
+  },
+  {
+    "conversationId": "conv_divya_002",
+    "customerId": "cust_007",
+    "orderId": "ord_007",
+    "date": "2026-08-14T19:38:02.155Z",
+    "topicTags": [
+      "delivery_delay",
+      "product_defect"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer said the promised replacement refrigerator never arrived; agent apologized and promised to follow up."
+  },
+  {
+    "conversationId": "conv_karan_001",
+    "customerId": "cust_008",
+    "orderId": "ord_008_10",
+    "date": "2026-07-11T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "refund",
+      "product_defect",
+      "delivery_delay"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported being billed twice for order ord_008_10 (Phone Charger), asked for clarification."
+  },
+  {
+    "conversationId": "conv_karan_002",
+    "customerId": "cust_008",
+    "orderId": "ord_008_10",
+    "date": "2026-07-08T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "billing",
+      "general_inquiry",
+      "account"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer asked for a status update on a previously requested refund for order ord_008_10 (Phone Charger)."
+  },
+  {
+    "conversationId": "conv_karan_003",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-10T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "sizing"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer had trouble logging into their account."
+  },
+  {
+    "conversationId": "conv_karan_004",
+    "customerId": "cust_008",
+    "orderId": "ord_008_04",
+    "date": "2026-07-20T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "billing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about delayed shipping on order ord_008_04 (Table Lamp)."
+  },
+  {
+    "conversationId": "conv_karan_005",
+    "customerId": "cust_008",
+    "orderId": "ord_008_02",
+    "date": "2026-06-27T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "refund",
+      "delivery_delay"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported being billed twice for order ord_008_02 (Kitchen Scale), asked for clarification."
+  },
+  {
+    "conversationId": "conv_karan_006",
+    "customerId": "cust_008",
+    "orderId": "ord_008_03",
+    "date": "2026-08-07T19:38:02.155Z",
+    "topicTags": [
+      "delivery_delay",
+      "shipping",
+      "billing"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer complained that order ord_008_03 (Running Shoes) arrived much later than the promised delivery window."
+  },
+  {
+    "conversationId": "conv_karan_007",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-04-11T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "warranty",
+      "shipping",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked if the store offers price matching against a competitor."
+  },
+  {
+    "conversationId": "conv_karan_008",
+    "customerId": "cust_008",
+    "orderId": "ord_008_11",
+    "date": "2026-04-13T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "billing",
+      "general_inquiry"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked for a status update on a previously requested refund for order ord_008_11 (Wall Clock)."
+  },
+  {
+    "conversationId": "conv_karan_009",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-04-30T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "refund",
+      "packaging",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer said a discount code did not apply at checkout."
+  },
+  {
+    "conversationId": "conv_karan_010",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-04-02T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "refund"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_011",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-05T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "warranty",
+      "shipping",
+      "delivery_delay"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked how to redeem a coupon code for their next purchase."
+  },
+  {
+    "conversationId": "conv_karan_012",
+    "customerId": "cust_008",
+    "orderId": "ord_008_02",
+    "date": "2026-05-07T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "account",
+      "delivery_delay"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer complained about the wrong size on order ord_008_02 (Kitchen Scale), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_013",
+    "customerId": "cust_008",
+    "orderId": "ord_008_11",
+    "date": "2026-06-20T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer left positive feedback about order ord_008_11 (Wall Clock) and fast delivery."
+  },
+  {
+    "conversationId": "conv_karan_014",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-03-12T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "billing",
+      "product_defect"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer left positive feedback about order ord_008_09 (Yoga Block) and fast delivery."
+  },
+  {
+    "conversationId": "conv_karan_015",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-05-19T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "general_inquiry",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about the return process for order ord_008_12 (Sunglasses)."
+  },
+  {
+    "conversationId": "conv_karan_016",
+    "customerId": "cust_008",
+    "orderId": "ord_008_08",
+    "date": "2026-06-13T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "refund",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported being billed twice for order ord_008_08 (Coffee Maker), asked for clarification."
+  },
+  {
+    "conversationId": "conv_karan_017",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-05-05T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "refund",
+      "billing"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer requested to update the phone number linked to their account."
+  },
+  {
+    "conversationId": "conv_karan_018",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-05-12T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "general_inquiry",
+      "billing",
+      "account"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer reported an item missing from order ord_008_05 (Backpack)."
+  },
+  {
+    "conversationId": "conv_karan_019",
+    "customerId": "cust_008",
+    "orderId": "ord_008_08",
+    "date": "2026-03-22T19:38:02.155Z",
+    "topicTags": [
+      "warranty",
+      "product_defect",
+      "refund",
+      "packaging",
+      "sizing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about warranty coverage for order ord_008_08 (Coffee Maker)."
+  },
+  {
+    "conversationId": "conv_karan_020",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-07-16T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "refund",
+      "billing",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer followed up on the status of a previously requested exchange for order ord_008_05 (Backpack)."
+  },
+  {
+    "conversationId": "conv_karan_021",
+    "customerId": "cust_008",
+    "orderId": "ord_008_01",
+    "date": "2026-07-27T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "account",
+      "delivery_delay"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer complained about the wrong size on order ord_008_01 (Bluetooth Speaker), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_022",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-08-09T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "sizing",
+      "warranty",
+      "refund"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_023",
+    "customerId": "cust_008",
+    "orderId": "ord_008_08",
+    "date": "2026-06-30T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "packaging"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked a general question about product specifications for order ord_008_08 (Coffee Maker)."
+  },
+  {
+    "conversationId": "conv_karan_024",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-04-11T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "product_defect"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked how to redeem a coupon code for their next purchase."
+  },
+  {
+    "conversationId": "conv_karan_025",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-05-14T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "warranty",
+      "sizing",
+      "refund"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_026",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-05-27T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "warranty",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported an item missing from order ord_008_05 (Backpack)."
+  },
+  {
+    "conversationId": "conv_karan_027",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-03-26T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "refund",
+      "account",
+      "general_inquiry",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer followed up on the status of a previously requested exchange for order ord_008_09 (Yoga Block)."
+  },
+  {
+    "conversationId": "conv_karan_028",
+    "customerId": "cust_008",
+    "orderId": "ord_008_06",
+    "date": "2026-03-23T19:38:02.155Z",
+    "topicTags": [
+      "warranty",
+      "product_defect",
+      "billing",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about warranty coverage for order ord_008_06 (Bluetooth Earbuds)."
+  },
+  {
+    "conversationId": "conv_karan_029",
+    "customerId": "cust_008",
+    "orderId": "ord_008_03",
+    "date": "2026-08-04T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "billing",
+      "sizing"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer asked for a status update on a previously requested refund for order ord_008_03 (Running Shoes)."
+  },
+  {
+    "conversationId": "conv_karan_030",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-04-22T19:38:02.155Z",
+    "topicTags": [
+      "warranty",
+      "product_defect",
+      "refund",
+      "account",
+      "billing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about warranty coverage for order ord_008_05 (Backpack)."
+  },
+  {
+    "conversationId": "conv_karan_031",
+    "customerId": "cust_008",
+    "orderId": "ord_008_04",
+    "date": "2026-04-27T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "warranty",
+      "delivery_delay"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer complained about the wrong size on order ord_008_04 (Table Lamp), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_032",
+    "customerId": "cust_008",
+    "orderId": "ord_008_08",
+    "date": "2026-07-25T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "shipping",
+      "general_inquiry"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported an item missing from order ord_008_08 (Coffee Maker)."
+  },
+  {
+    "conversationId": "conv_karan_033",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-02-07T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "account"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_034",
+    "customerId": "cust_008",
+    "orderId": "ord_008_02",
+    "date": "2026-03-22T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "billing"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer reported an item missing from order ord_008_02 (Kitchen Scale)."
+  },
+  {
+    "conversationId": "conv_karan_035",
+    "customerId": "cust_008",
+    "orderId": "ord_008_01",
+    "date": "2026-03-03T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "refund",
+      "sizing",
+      "general_inquiry",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported being billed twice for order ord_008_01 (Bluetooth Speaker), asked for clarification."
+  },
+  {
+    "conversationId": "conv_karan_036",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-08-07T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "billing",
+      "account",
+      "shipping"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported an item missing from order ord_008_09 (Yoga Block)."
+  },
+  {
+    "conversationId": "conv_karan_037",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-02-04T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "sizing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked how to redeem a coupon code for their next purchase."
+  },
+  {
+    "conversationId": "conv_karan_038",
+    "customerId": "cust_008",
+    "orderId": "ord_008_10",
+    "date": "2026-06-14T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "billing",
+      "refund",
+      "general_inquiry"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported the packaging was damaged on arrival for order ord_008_10 (Phone Charger)."
+  },
+  {
+    "conversationId": "conv_karan_039",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-04-20T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "billing",
+      "warranty",
+      "refund"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer requested to update the phone number linked to their account."
+  },
+  {
+    "conversationId": "conv_karan_040",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-03-29T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "product_defect",
+      "sizing",
+      "billing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_041",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-06-07T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "warranty",
+      "billing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer had trouble logging into their account."
+  },
+  {
+    "conversationId": "conv_karan_042",
+    "customerId": "cust_008",
+    "orderId": "ord_008_06",
+    "date": "2026-03-05T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "delivery_delay"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer requested an invoice copy for order ord_008_06 (Bluetooth Earbuds) for expense reimbursement."
+  },
+  {
+    "conversationId": "conv_karan_043",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-07-29T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "warranty",
+      "sizing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported an item missing from order ord_008_12 (Sunglasses)."
+  },
+  {
+    "conversationId": "conv_karan_044",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-07-30T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "account"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer left positive feedback about order ord_008_12 (Sunglasses) and fast delivery."
+  },
+  {
+    "conversationId": "conv_karan_045",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-03-28T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_046",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-06-25T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "warranty"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_047",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-05-11T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "billing",
+      "general_inquiry",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_048",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-03-15T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "delivery_delay"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_049",
+    "customerId": "cust_008",
+    "orderId": "ord_008_01",
+    "date": "2026-07-12T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "refund",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about delayed shipping on order ord_008_01 (Bluetooth Speaker)."
+  },
+  {
+    "conversationId": "conv_karan_050",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-09T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer said a discount code did not apply at checkout."
+  },
+  {
+    "conversationId": "conv_karan_051",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-05-23T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "packaging",
+      "warranty",
+      "general_inquiry"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer requested to update the phone number linked to their account."
+  },
+  {
+    "conversationId": "conv_karan_052",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-03-16T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "general_inquiry",
+      "shipping",
+      "billing",
+      "warranty"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked about the return process for order ord_008_09 (Yoga Block)."
+  },
+  {
+    "conversationId": "conv_karan_053",
+    "customerId": "cust_008",
+    "orderId": "ord_008_07",
+    "date": "2026-05-12T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "shipping",
+      "product_defect",
+      "sizing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer requested an invoice copy for order ord_008_07 (Office Chair) for expense reimbursement."
+  },
+  {
+    "conversationId": "conv_karan_054",
+    "customerId": "cust_008",
+    "orderId": "ord_008_07",
+    "date": "2026-05-15T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "product_defect",
+      "delivery_delay",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer left positive feedback about order ord_008_07 (Office Chair) and fast delivery."
+  },
+  {
+    "conversationId": "conv_karan_055",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-03-18T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "sizing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_056",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-08-09T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "warranty",
+      "delivery_delay"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked if the store offers price matching against a competitor."
+  },
+  {
+    "conversationId": "conv_karan_057",
+    "customerId": "cust_008",
+    "orderId": "ord_008_04",
+    "date": "2026-05-12T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "refund",
+      "shipping",
+      "product_defect",
+      "billing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer followed up on the status of a previously requested exchange for order ord_008_04 (Table Lamp)."
+  },
+  {
+    "conversationId": "conv_karan_058",
+    "customerId": "cust_008",
+    "orderId": "ord_008_03",
+    "date": "2026-06-24T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "refund",
+      "account",
+      "billing"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer reported an item missing from order ord_008_03 (Running Shoes)."
+  },
+  {
+    "conversationId": "conv_karan_059",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-03-11T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "refund",
+      "packaging"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer followed up on the status of a previously requested exchange for order ord_008_12 (Sunglasses)."
+  },
+  {
+    "conversationId": "conv_karan_060",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-05-27T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "delivery_delay",
+      "shipping",
+      "product_defect"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer requested to update the phone number linked to their account."
+  },
+  {
+    "conversationId": "conv_karan_061",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-03-18T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "refund"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer requested to update the phone number linked to their account."
+  },
+  {
+    "conversationId": "conv_karan_062",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-02-07T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "packaging",
+      "account",
+      "delivery_delay"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked if the store offers price matching against a competitor."
+  },
+  {
+    "conversationId": "conv_karan_063",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-04-15T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "refund"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_064",
+    "customerId": "cust_008",
+    "orderId": "ord_008_04",
+    "date": "2026-04-05T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "refund",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer followed up on the status of a previously requested exchange for order ord_008_04 (Table Lamp)."
+  },
+  {
+    "conversationId": "conv_karan_065",
+    "customerId": "cust_008",
+    "orderId": "ord_008_11",
+    "date": "2026-05-27T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "shipping",
+      "warranty"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer requested an invoice copy for order ord_008_11 (Wall Clock) for expense reimbursement."
+  },
+  {
+    "conversationId": "conv_karan_066",
+    "customerId": "cust_008",
+    "orderId": "ord_008_08",
+    "date": "2026-02-20T19:38:02.155Z",
+    "topicTags": [
+      "warranty",
+      "product_defect",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about warranty coverage for order ord_008_08 (Coffee Maker)."
+  },
+  {
+    "conversationId": "conv_karan_067",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-04-11T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "sizing",
+      "refund"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_068",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-21T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "product_defect"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked how to redeem a coupon code for their next purchase."
+  },
+  {
+    "conversationId": "conv_karan_069",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-06-29T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "billing",
+      "delivery_delay",
+      "shipping"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported an item missing from order ord_008_12 (Sunglasses)."
+  },
+  {
+    "conversationId": "conv_karan_070",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-02-04T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "account",
+      "billing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about delayed shipping on order ord_008_05 (Backpack)."
+  },
+  {
+    "conversationId": "conv_karan_071",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-06-28T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "refund"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked how to redeem a coupon code for their next purchase."
+  },
+  {
+    "conversationId": "conv_karan_072",
+    "customerId": "cust_008",
+    "orderId": "ord_008_10",
+    "date": "2026-03-14T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "delivery_delay",
+      "warranty",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked a general question about product specifications for order ord_008_10 (Phone Charger)."
+  },
+  {
+    "conversationId": "conv_karan_073",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-06-30T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "shipping"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_074",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-04-02T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "general_inquiry",
+      "packaging",
+      "shipping"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer requested to update the phone number linked to their account."
+  },
+  {
+    "conversationId": "conv_karan_075",
+    "customerId": "cust_008",
+    "orderId": "ord_008_11",
+    "date": "2026-02-09T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "billing",
+      "warranty",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked for a status update on a previously requested refund for order ord_008_11 (Wall Clock)."
+  },
+  {
+    "conversationId": "conv_karan_076",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-03-25T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "account",
+      "packaging",
+      "sizing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer said a discount code did not apply at checkout."
+  },
+  {
+    "conversationId": "conv_karan_077",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-03-27T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "billing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked a general question about product specifications for order ord_008_12 (Sunglasses)."
+  },
+  {
+    "conversationId": "conv_karan_078",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-06-08T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked how to redeem a coupon code for their next purchase."
+  },
+  {
+    "conversationId": "conv_karan_079",
+    "customerId": "cust_008",
+    "orderId": "ord_008_04",
+    "date": "2026-05-17T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "general_inquiry"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer complained about the wrong size on order ord_008_04 (Table Lamp), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_080",
+    "customerId": "cust_008",
+    "orderId": "ord_008_07",
+    "date": "2026-06-27T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported the packaging was damaged on arrival for order ord_008_07 (Office Chair)."
+  },
+  {
+    "conversationId": "conv_karan_081",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-07-05T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "refund",
+      "billing"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer followed up on the status of a previously requested exchange for order ord_008_12 (Sunglasses)."
+  },
+  {
+    "conversationId": "conv_karan_082",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-08T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "product_defect",
+      "sizing",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked how to redeem a coupon code for their next purchase."
+  },
+  {
+    "conversationId": "conv_karan_083",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-08-04T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "refund"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked how to redeem a coupon code for their next purchase."
+  },
+  {
+    "conversationId": "conv_karan_084",
+    "customerId": "cust_008",
+    "orderId": "ord_008_06",
+    "date": "2026-02-13T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "refund",
+      "general_inquiry",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer followed up on the status of a previously requested exchange for order ord_008_06 (Bluetooth Earbuds)."
+  },
+  {
+    "conversationId": "conv_karan_085",
+    "customerId": "cust_008",
+    "orderId": "ord_008_04",
+    "date": "2026-02-12T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "refund",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer followed up on the status of a previously requested exchange for order ord_008_04 (Table Lamp)."
+  },
+  {
+    "conversationId": "conv_karan_086",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-07-31T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "sizing"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked about delayed shipping on order ord_008_09 (Yoga Block)."
+  },
+  {
+    "conversationId": "conv_karan_087",
+    "customerId": "cust_008",
+    "orderId": "ord_008_10",
+    "date": "2026-08-06T19:38:02.155Z",
+    "topicTags": [
+      "delivery_delay",
+      "shipping",
+      "warranty",
+      "product_defect"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer complained that order ord_008_10 (Phone Charger) arrived much later than the promised delivery window."
+  },
+  {
+    "conversationId": "conv_karan_088",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-04-23T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "refund",
+      "sizing"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer said a discount code did not apply at checkout."
+  },
+  {
+    "conversationId": "conv_karan_089",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-07T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "refund",
+      "billing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_090",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-02-14T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "general_inquiry",
+      "warranty",
+      "account"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer asked about the return process for order ord_008_12 (Sunglasses)."
+  },
+  {
+    "conversationId": "conv_karan_091",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-08-10T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "delivery_delay",
+      "product_defect",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked if the store offers price matching against a competitor."
+  },
+  {
+    "conversationId": "conv_karan_092",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-05T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "delivery_delay",
+      "sizing",
+      "account"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer said a discount code did not apply at checkout."
+  },
+  {
+    "conversationId": "conv_karan_093",
+    "customerId": "cust_008",
+    "orderId": "ord_008_02",
+    "date": "2026-04-13T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "delivery_delay",
+      "general_inquiry",
+      "refund"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported the packaging was damaged on arrival for order ord_008_02 (Kitchen Scale)."
+  },
+  {
+    "conversationId": "conv_karan_094",
+    "customerId": "cust_008",
+    "orderId": "ord_008_06",
+    "date": "2026-02-01T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "shipping",
+      "refund",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported an item missing from order ord_008_06 (Bluetooth Earbuds)."
+  },
+  {
+    "conversationId": "conv_karan_095",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-07T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "sizing",
+      "product_defect"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer said a discount code did not apply at checkout."
+  },
+  {
+    "conversationId": "conv_karan_096",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-06-19T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "refund",
+      "account",
+      "shipping",
+      "warranty"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer followed up on the status of a previously requested exchange for order ord_008_05 (Backpack)."
+  },
+  {
+    "conversationId": "conv_karan_097",
+    "customerId": "cust_008",
+    "orderId": "ord_008_11",
+    "date": "2026-06-29T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "account"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked a general question about product specifications for order ord_008_11 (Wall Clock)."
+  },
+  {
+    "conversationId": "conv_karan_098",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-05-12T19:38:02.155Z",
+    "topicTags": [
+      "delivery_delay",
+      "shipping",
+      "general_inquiry"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer complained that order ord_008_12 (Sunglasses) arrived much later than the promised delivery window."
+  },
+  {
+    "conversationId": "conv_karan_099",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-05-10T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "billing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about refund eligibility for order ord_008_05."
+  },
+  {
+    "conversationId": "conv_karan_100",
+    "customerId": "cust_008",
+    "orderId": "ord_008_08",
+    "date": "2026-02-16T19:38:02.155Z",
+    "topicTags": [
+      "warranty",
+      "product_defect",
+      "account",
+      "delivery_delay"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about warranty coverage for order ord_008_08 (Coffee Maker)."
+  },
+  {
+    "conversationId": "conv_karan_101",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-03-29T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "refund"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer left positive feedback about order ord_008_09 (Yoga Block) and fast delivery."
+  },
+  {
+    "conversationId": "conv_karan_102",
+    "customerId": "cust_008",
+    "orderId": "ord_008_06",
+    "date": "2026-08-03T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "packaging",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about delayed shipping on order ord_008_06 (Bluetooth Earbuds)."
+  },
+  {
+    "conversationId": "conv_karan_103",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-03-24T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "delivery_delay",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_104",
+    "customerId": "cust_008",
+    "orderId": "ord_008_06",
+    "date": "2026-04-30T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "account",
+      "shipping"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported the packaging was damaged on arrival for order ord_008_06 (Bluetooth Earbuds)."
+  },
+  {
+    "conversationId": "conv_karan_105",
+    "customerId": "cust_008",
+    "orderId": "ord_008_02",
+    "date": "2026-02-05T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "warranty",
+      "sizing",
+      "refund"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported an item missing from order ord_008_02 (Kitchen Scale)."
+  },
+  {
+    "conversationId": "conv_karan_106",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-07-18T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "delivery_delay",
+      "billing",
+      "packaging"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer left positive feedback about order ord_008_09 (Yoga Block) and fast delivery."
+  },
+  {
+    "conversationId": "conv_karan_107",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-05-30T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "billing",
+      "packaging",
+      "warranty"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked for a status update on a previously requested refund for order ord_008_05 (Backpack)."
+  },
+  {
+    "conversationId": "conv_karan_108",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-29T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "account",
+      "delivery_delay"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked how to redeem a coupon code for their next purchase."
+  },
+  {
+    "conversationId": "conv_karan_109",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-07-14T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "general_inquiry",
+      "warranty",
+      "sizing",
+      "billing"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer asked about the return process for order ord_008_12 (Sunglasses)."
+  },
+  {
+    "conversationId": "conv_karan_110",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-03T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_111",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-05-10T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "refund",
+      "general_inquiry",
+      "shipping"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer requested to update the phone number linked to their account."
+  },
+  {
+    "conversationId": "conv_karan_112",
+    "customerId": "cust_008",
+    "orderId": "ord_008_02",
+    "date": "2026-05-17T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "general_inquiry",
+      "product_defect",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about the return process for order ord_008_02 (Kitchen Scale)."
+  },
+  {
+    "conversationId": "conv_karan_113",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-06-13T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "delivery_delay",
+      "sizing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked if the store offers price matching against a competitor."
+  },
+  {
+    "conversationId": "conv_karan_114",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-08-12T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "refund",
+      "general_inquiry",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported being billed twice for order ord_008_12 (Sunglasses), asked for clarification."
+  },
+  {
+    "conversationId": "conv_karan_115",
+    "customerId": "cust_008",
+    "orderId": "ord_008_01",
+    "date": "2026-04-03T19:38:02.155Z",
+    "topicTags": [
+      "warranty",
+      "product_defect",
+      "general_inquiry",
+      "sizing",
+      "billing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about warranty coverage for order ord_008_01 (Bluetooth Speaker)."
+  },
+  {
+    "conversationId": "conv_karan_116",
+    "customerId": "cust_008",
+    "orderId": "ord_008_06",
+    "date": "2026-07-05T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "billing",
+      "product_defect"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer left positive feedback about order ord_008_06 (Bluetooth Earbuds) and fast delivery."
+  },
+  {
+    "conversationId": "conv_karan_117",
+    "customerId": "cust_008",
+    "orderId": "ord_008_01",
+    "date": "2026-07-01T19:38:02.155Z",
+    "topicTags": [
+      "delivery_delay",
+      "shipping",
+      "general_inquiry"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer complained that order ord_008_01 (Bluetooth Speaker) arrived much later than the promised delivery window."
+  },
+  {
+    "conversationId": "conv_karan_118",
+    "customerId": "cust_008",
+    "orderId": "ord_008_03",
+    "date": "2026-06-21T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "general_inquiry",
+      "product_defect",
+      "billing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about the return process for order ord_008_03 (Running Shoes)."
+  },
+  {
+    "conversationId": "conv_karan_119",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-05-11T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "sizing",
+      "warranty",
+      "general_inquiry"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer had trouble logging into their account."
+  },
+  {
+    "conversationId": "conv_karan_120",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-08-03T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "general_inquiry",
+      "account",
+      "delivery_delay",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about the return process for order ord_008_09 (Yoga Block)."
+  },
+  {
+    "conversationId": "conv_karan_121",
+    "customerId": "cust_008",
+    "orderId": "ord_008_06",
+    "date": "2026-04-01T19:38:02.155Z",
+    "topicTags": [
+      "delivery_delay",
+      "shipping",
+      "sizing",
+      "general_inquiry"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer complained that order ord_008_06 (Bluetooth Earbuds) arrived much later than the promised delivery window."
+  },
+  {
+    "conversationId": "conv_karan_122",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-29T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "account",
+      "packaging",
+      "sizing"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_123",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-05-29T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "account"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer complained about the wrong size on order ord_008_05 (Backpack), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_124",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-03-12T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "product_defect",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_125",
+    "customerId": "cust_008",
+    "orderId": "ord_008_02",
+    "date": "2026-04-04T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "product_defect"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer left positive feedback about order ord_008_02 (Kitchen Scale) and fast delivery."
+  },
+  {
+    "conversationId": "conv_karan_126",
+    "customerId": "cust_008",
+    "orderId": "ord_008_01",
+    "date": "2026-07-22T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "billing",
+      "sizing"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked for a status update on a previously requested refund for order ord_008_01 (Bluetooth Speaker)."
+  },
+  {
+    "conversationId": "conv_karan_127",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-08-14T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "shipping",
+      "packaging",
+      "refund"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer had trouble logging into their account."
+  },
+  {
+    "conversationId": "conv_karan_128",
+    "customerId": "cust_008",
+    "orderId": "ord_008_02",
+    "date": "2026-06-14T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "general_inquiry",
+      "account",
+      "delivery_delay"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported the packaging was damaged on arrival for order ord_008_02 (Kitchen Scale)."
+  },
+  {
+    "conversationId": "conv_karan_129",
+    "customerId": "cust_008",
+    "orderId": "ord_008_10",
+    "date": "2026-08-07T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "general_inquiry",
+      "shipping",
+      "sizing",
+      "product_defect"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer asked about the return process for order ord_008_10 (Phone Charger)."
+  },
+  {
+    "conversationId": "conv_karan_130",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-04-11T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "refund",
+      "sizing"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_131",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-02-03T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "general_inquiry",
+      "packaging"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer requested to update the phone number linked to their account."
+  },
+  {
+    "conversationId": "conv_karan_132",
+    "customerId": "cust_008",
+    "orderId": "ord_008_07",
+    "date": "2026-04-23T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "refund"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer complained about the wrong size on order ord_008_07 (Office Chair), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_133",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-01-31T19:38:02.155Z",
+    "topicTags": [
+      "warranty",
+      "product_defect",
+      "account",
+      "refund",
+      "billing"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked about warranty coverage for order ord_008_05 (Backpack)."
+  },
+  {
+    "conversationId": "conv_karan_134",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-03-10T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "billing",
+      "shipping",
+      "delivery_delay"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported the packaging was damaged on arrival for order ord_008_05 (Backpack)."
+  },
+  {
+    "conversationId": "conv_karan_135",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-03-31T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "packaging",
+      "refund"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_136",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-06-22T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "delivery_delay",
+      "refund"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer requested to update the phone number linked to their account."
+  },
+  {
+    "conversationId": "conv_karan_137",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-03-23T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "refund"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_138",
+    "customerId": "cust_008",
+    "orderId": "ord_008_03",
+    "date": "2026-08-12T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "billing",
+      "sizing",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked for a status update on a previously requested refund for order ord_008_03 (Running Shoes)."
+  },
+  {
+    "conversationId": "conv_karan_139",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-05-28T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "refund",
+      "product_defect"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer asked how to redeem a coupon code for their next purchase."
+  },
+  {
+    "conversationId": "conv_karan_140",
+    "customerId": "cust_008",
+    "orderId": "ord_008_01",
+    "date": "2026-06-06T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "general_inquiry",
+      "sizing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about delayed shipping on order ord_008_01 (Bluetooth Speaker)."
+  },
+  {
+    "conversationId": "conv_karan_141",
+    "customerId": "cust_008",
+    "orderId": "ord_008_06",
+    "date": "2026-05-02T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "billing",
+      "delivery_delay",
+      "packaging",
+      "general_inquiry"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked for a status update on a previously requested refund for order ord_008_06 (Bluetooth Earbuds)."
+  },
+  {
+    "conversationId": "conv_karan_142",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-07-28T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "billing",
+      "warranty"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked for a status update on a previously requested refund for order ord_008_09 (Yoga Block)."
+  },
+  {
+    "conversationId": "conv_karan_143",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-04-13T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer complained about the wrong size on order ord_008_05 (Backpack), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_144",
+    "customerId": "cust_008",
+    "orderId": "ord_008_06",
+    "date": "2026-03-31T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "sizing",
+      "general_inquiry",
+      "shipping"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported an item missing from order ord_008_06 (Bluetooth Earbuds)."
+  },
+  {
+    "conversationId": "conv_karan_145",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-04-11T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "delivery_delay"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer complained about the wrong size on order ord_008_09 (Yoga Block), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_146",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-03-04T19:38:02.155Z",
+    "topicTags": [
+      "warranty",
+      "product_defect",
+      "general_inquiry"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about warranty coverage for order ord_008_12 (Sunglasses)."
+  },
+  {
+    "conversationId": "conv_karan_147",
+    "customerId": "cust_008",
+    "orderId": "ord_008_03",
+    "date": "2026-05-08T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "packaging"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked a general question about product specifications for order ord_008_03 (Running Shoes)."
+  },
+  {
+    "conversationId": "conv_karan_148",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-08-15T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "shipping",
+      "product_defect"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer had trouble logging into their account."
+  },
+  {
+    "conversationId": "conv_karan_149",
+    "customerId": "cust_008",
+    "orderId": "ord_008_02",
+    "date": "2026-06-02T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "refund",
+      "sizing",
+      "product_defect"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported being billed twice for order ord_008_02 (Kitchen Scale), asked for clarification."
+  },
+  {
+    "conversationId": "conv_karan_150",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-07-30T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "refund",
+      "product_defect"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer followed up on the status of a previously requested exchange for order ord_008_09 (Yoga Block)."
+  },
+  {
+    "conversationId": "conv_karan_151",
+    "customerId": "cust_008",
+    "orderId": "ord_008_06",
+    "date": "2026-02-25T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "refund",
+      "account"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer reported an item missing from order ord_008_06 (Bluetooth Earbuds)."
+  },
+  {
+    "conversationId": "conv_karan_152",
+    "customerId": "cust_008",
+    "orderId": "ord_008_08",
+    "date": "2026-03-18T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "billing",
+      "warranty",
+      "sizing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked for a status update on a previously requested refund for order ord_008_08 (Coffee Maker)."
+  },
+  {
+    "conversationId": "conv_karan_153",
+    "customerId": "cust_008",
+    "orderId": "ord_008_08",
+    "date": "2026-07-10T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "warranty",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer complained about the wrong size on order ord_008_08 (Coffee Maker), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_154",
+    "customerId": "cust_008",
+    "orderId": "ord_008_10",
+    "date": "2026-02-23T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "billing",
+      "sizing"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked for a status update on a previously requested refund for order ord_008_10 (Phone Charger)."
+  },
+  {
+    "conversationId": "conv_karan_155",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-07-05T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "account",
+      "general_inquiry",
+      "shipping"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer complained about the wrong size on order ord_008_09 (Yoga Block), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_156",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-08-02T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "delivery_delay",
+      "product_defect"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_157",
+    "customerId": "cust_008",
+    "orderId": "ord_008_02",
+    "date": "2026-05-16T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "billing",
+      "delivery_delay",
+      "packaging"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer complained about the wrong size on order ord_008_02 (Kitchen Scale), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_158",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-07-10T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "billing",
+      "account",
+      "packaging",
+      "shipping"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked for a status update on a previously requested refund for order ord_008_12 (Sunglasses)."
+  },
+  {
+    "conversationId": "conv_karan_159",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-03-10T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "billing",
+      "product_defect",
+      "general_inquiry"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer requested to update the phone number linked to their account."
+  },
+  {
+    "conversationId": "conv_karan_160",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-04-24T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "refund",
+      "warranty",
+      "product_defect"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer followed up on the status of a previously requested exchange for order ord_008_05 (Backpack)."
+  },
+  {
+    "conversationId": "conv_karan_161",
+    "customerId": "cust_008",
+    "orderId": "ord_008_10",
+    "date": "2026-07-16T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "shipping",
+      "warranty",
+      "billing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked a general question about product specifications for order ord_008_10 (Phone Charger)."
+  },
+  {
+    "conversationId": "conv_karan_162",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-06-10T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "warranty"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_163",
+    "customerId": "cust_008",
+    "orderId": "ord_008_04",
+    "date": "2026-06-09T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "warranty",
+      "general_inquiry"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported the packaging was damaged on arrival for order ord_008_04 (Table Lamp)."
+  },
+  {
+    "conversationId": "conv_karan_164",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-22T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_165",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-02-23T19:38:02.155Z",
+    "topicTags": [
+      "account",
+      "refund"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer had trouble logging into their account."
+  },
+  {
+    "conversationId": "conv_karan_166",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-02-26T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "general_inquiry",
+      "refund"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer reported the packaging was damaged on arrival for order ord_008_09 (Yoga Block)."
+  },
+  {
+    "conversationId": "conv_karan_167",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-09T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "sizing",
+      "account",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_168",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-05-12T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "warranty",
+      "refund"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer said a discount code did not apply at checkout."
+  },
+  {
+    "conversationId": "conv_karan_169",
+    "customerId": "cust_008",
+    "orderId": "ord_008_11",
+    "date": "2026-07-12T19:38:02.155Z",
+    "topicTags": [
+      "general_inquiry",
+      "delivery_delay"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked a general question about product specifications for order ord_008_11 (Wall Clock)."
+  },
+  {
+    "conversationId": "conv_karan_170",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-05-22T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "delivery_delay",
+      "refund"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_171",
+    "customerId": "cust_008",
+    "orderId": "ord_008_07",
+    "date": "2026-05-12T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "delivery_delay",
+      "shipping"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer reported an item missing from order ord_008_07 (Office Chair)."
+  },
+  {
+    "conversationId": "conv_karan_172",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-02-14T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "sizing",
+      "delivery_delay",
+      "shipping"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked if the store offers price matching against a competitor."
+  },
+  {
+    "conversationId": "conv_karan_173",
+    "customerId": "cust_008",
+    "orderId": "ord_008_01",
+    "date": "2026-04-14T19:38:02.155Z",
+    "topicTags": [
+      "refund",
+      "general_inquiry",
+      "shipping"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked about the return process for order ord_008_01 (Bluetooth Speaker)."
+  },
+  {
+    "conversationId": "conv_karan_174",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-06-22T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "refund",
+      "account",
+      "product_defect"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked if the store offers price matching against a competitor."
+  },
+  {
+    "conversationId": "conv_karan_175",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-03-13T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "billing",
+      "sizing",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about delayed shipping on order ord_008_05 (Backpack)."
+  },
+  {
+    "conversationId": "conv_karan_176",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-06-13T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "billing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer complained about the wrong size on order ord_008_09 (Yoga Block), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_177",
+    "customerId": "cust_008",
+    "orderId": "ord_008_04",
+    "date": "2026-04-12T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "refund",
+      "general_inquiry",
+      "warranty",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported being billed twice for order ord_008_04 (Table Lamp), asked for clarification."
+  },
+  {
+    "conversationId": "conv_karan_178",
+    "customerId": "cust_008",
+    "orderId": "ord_008_12",
+    "date": "2026-07-19T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "refund",
+      "product_defect",
+      "billing"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer followed up on the status of a previously requested exchange for order ord_008_12 (Sunglasses)."
+  },
+  {
+    "conversationId": "conv_karan_179",
+    "customerId": "cust_008",
+    "orderId": "ord_008_03",
+    "date": "2026-07-24T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "billing",
+      "account",
+      "general_inquiry"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about delayed shipping on order ord_008_03 (Running Shoes)."
+  },
+  {
+    "conversationId": "conv_karan_180",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-03-07T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "shipping"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer complained about the wrong size on order ord_008_09 (Yoga Block), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_181",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-29T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "delivery_delay",
+      "refund",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer said a discount code did not apply at checkout."
+  },
+  {
+    "conversationId": "conv_karan_182",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-02-12T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "warranty",
+      "account",
+      "general_inquiry"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked to change the delivery address before dispatch."
+  },
+  {
+    "conversationId": "conv_karan_183",
+    "customerId": "cust_008",
+    "orderId": "ord_008_08",
+    "date": "2026-04-02T19:38:02.155Z",
+    "topicTags": [
+      "delivery_delay",
+      "shipping",
+      "product_defect",
+      "sizing",
+      "general_inquiry"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer complained that order ord_008_08 (Coffee Maker) arrived much later than the promised delivery window."
+  },
+  {
+    "conversationId": "conv_karan_184",
+    "customerId": "cust_008",
+    "orderId": "ord_008_04",
+    "date": "2026-06-29T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "delivery_delay",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer requested an invoice copy for order ord_008_04 (Table Lamp) for expense reimbursement."
+  },
+  {
+    "conversationId": "conv_karan_185",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-08-01T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "product_defect",
+      "warranty",
+      "account"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_186",
+    "customerId": "cust_008",
+    "orderId": "ord_008_08",
+    "date": "2026-02-01T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "general_inquiry"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about delayed shipping on order ord_008_08 (Coffee Maker)."
+  },
+  {
+    "conversationId": "conv_karan_187",
+    "customerId": "cust_008",
+    "orderId": "ord_008_01",
+    "date": "2026-06-24T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "sizing",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported an item missing from order ord_008_01 (Bluetooth Speaker)."
+  },
+  {
+    "conversationId": "conv_karan_188",
+    "customerId": "cust_008",
+    "orderId": "ord_008_07",
+    "date": "2026-03-22T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "refund",
+      "account",
+      "general_inquiry",
+      "sizing"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported being billed twice for order ord_008_07 (Office Chair), asked for clarification."
+  },
+  {
+    "conversationId": "conv_karan_189",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-02-25T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "shipping"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_190",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-03-14T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "sizing"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer asked how to cancel a pending order."
+  },
+  {
+    "conversationId": "conv_karan_191",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-04-06T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "billing",
+      "delivery_delay"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer complained about the wrong size on order ord_008_09 (Yoga Block), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_192",
+    "customerId": "cust_008",
+    "orderId": "ord_008_04",
+    "date": "2026-04-27T19:38:02.155Z",
+    "topicTags": [
+      "sizing",
+      "product_defect",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer complained about the wrong size on order ord_008_04 (Table Lamp), requested an exchange."
+  },
+  {
+    "conversationId": "conv_karan_193",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-12T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "packaging",
+      "refund"
+    ],
+    "outcome": "escalated",
+    "summaryText": "Customer asked if the store offers price matching against a competitor."
+  },
+  {
+    "conversationId": "conv_karan_194",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-08-08T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "shipping"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked if the store offers price matching against a competitor."
+  },
+  {
+    "conversationId": "conv_karan_195",
+    "customerId": "cust_008",
+    "orderId": "ord_008_05",
+    "date": "2026-05-16T19:38:02.155Z",
+    "topicTags": [
+      "delivery_delay",
+      "shipping",
+      "general_inquiry",
+      "billing",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer complained that order ord_008_05 (Backpack) arrived much later than the promised delivery window."
+  },
+  {
+    "conversationId": "conv_karan_196",
+    "customerId": "cust_008",
+    "orderId": "ord_008_06",
+    "date": "2026-05-11T19:38:02.155Z",
+    "topicTags": [
+      "shipping",
+      "delivery_delay",
+      "warranty"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked about delayed shipping on order ord_008_06 (Bluetooth Earbuds)."
+  },
+  {
+    "conversationId": "conv_karan_197",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-07-13T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "account",
+      "delivery_delay"
+    ],
+    "outcome": "unresolved",
+    "summaryText": "Customer asked if the store offers price matching against a competitor."
+  },
+  {
+    "conversationId": "conv_karan_198",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-05-08T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "warranty",
+      "refund",
+      "delivery_delay"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked if the store offers price matching against a competitor."
+  },
+  {
+    "conversationId": "conv_karan_199",
+    "customerId": "cust_008",
+    "orderId": "ord_008_09",
+    "date": "2026-07-16T19:38:02.155Z",
+    "topicTags": [
+      "packaging",
+      "product_defect",
+      "billing",
+      "shipping"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer reported the packaging was damaged on arrival for order ord_008_09 (Yoga Block)."
+  },
+  {
+    "conversationId": "conv_karan_200",
+    "customerId": "cust_008",
+    "orderId": null,
+    "date": "2026-06-18T19:38:02.155Z",
+    "topicTags": [
+      "billing",
+      "general_inquiry",
+      "refund",
+      "warranty",
+      "packaging"
+    ],
+    "outcome": "resolved",
+    "summaryText": "Customer asked if the store offers price matching against a competitor."
+  }
+]
