@@ -18,7 +18,7 @@ Requests above ₹500 require human approval via the approval panel. The agent s
 
 ## Credits
 
-Store credit can be auto-approved up to ₹500 INR per request, using the same cap as refunds. Credits are used when a refund to the original payment method is not appropriate, for example a goodwill gesture for a delayed delivery where the order itself is not being returned. Credits above ₹500 INR require the same human approval process as refunds above the cap.
+Store credit can be auto-approved up to ₹500 INR per request, using the same cap as refunds. Credits are used when a refund to the original payment method is not appropriate, for example a goodwill gesture for a delayed delivery where the order itself is not being returned. A credit tied to an order is also bounded by that order: the total of refunds and credits already issued on the order plus the new credit may not exceed what was charged on it without human approval, so an order that has already been refunded in full cannot receive further automatic credit. A credit not tied to any order always requires human approval, because there is no charged amount to check it against. Credits above ₹500 INR require the same human approval process as refunds above the cap.
 
 ## Duplicate Charges
 

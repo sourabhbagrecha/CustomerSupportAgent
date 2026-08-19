@@ -34,6 +34,18 @@ function seedOrder(
   return order;
 }
 
+// Inserts an additional succeeded payment (refund or credit) on an order
+// seeded by seedOrder above. The payments table has a BEFORE INSERT trigger
+// requiring payments.customer_id to own payments.order_id, so this always
+// uses customer 'c1', matching the order seedOrder creates.
+function seedPayment(db: Database.Database, paymentId: string, orderId: string, type: "refund" | "credit", amount: number) {
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO payments (id, order_id, customer_id, amount, currency, type, status, idempotency_key, provider_reference, created_at)
+     VALUES (@paymentId, @orderId, 'c1', @amount, 'INR', @type, 'succeeded', NULL, NULL, @now)`,
+  ).run({ paymentId, orderId, amount, type, now });
+}
+
 let db: Database.Database;
 
 beforeEach(() => {
@@ -130,14 +142,56 @@ describe("evaluatePolicy", () => {
     if (verdict.verdict === "deny") expect(verdict.denyReason).toBe("invalid_amount");
   });
 
-  it("allows an orderless credit within cap regardless of order eligibility rules", () => {
+  it("requires approval for an orderless credit, even within cap", () => {
     const verdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "credit", orderId: null, amount: 200 });
+    expect(verdict.verdict).toBe("requires_approval");
+  });
+
+  it("requires approval for an order-tied credit above its cap", () => {
+    seedOrder(db, { amount: 2000 });
+    const verdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "credit", orderId: "o1", amount: 900 });
+    expect(verdict.verdict).toBe("requires_approval");
+  });
+
+  it("allows a credit within the order's creditable balance and cap", () => {
+    seedOrder(db, { amount: 1500 });
+    const verdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "credit", orderId: "o1", amount: 200 });
     expect(verdict.verdict).toBe("allow");
   });
 
-  it("requires approval for a credit above its cap", () => {
-    const verdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "credit", orderId: null, amount: 900 });
+  it("requires approval for a credit on an order that was already refunded in full", () => {
+    seedOrder(db, { amount: 450 });
+    seedPayment(db, "pay_refund1", "o1", "refund", 450);
+    const verdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "credit", orderId: "o1", amount: 500 });
     expect(verdict.verdict).toBe("requires_approval");
+    if (verdict.verdict === "requires_approval") {
+      expect(verdict.reason).toContain("creditable balance of 0");
+    }
+  });
+
+  it("requires approval for a credit above the order's charged amount", () => {
+    seedOrder(db, { amount: 150 });
+    const verdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "credit", orderId: "o1", amount: 200 });
+    expect(verdict.verdict).toBe("requires_approval");
+    if (verdict.verdict === "requires_approval") {
+      expect(verdict.reason).toContain("creditable balance of 150");
+    }
+  });
+
+  it("counts prior credits toward the creditable balance", () => {
+    seedOrder(db, { amount: 500 });
+    seedPayment(db, "pay_credit1", "o1", "credit", 400);
+    const overVerdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "credit", orderId: "o1", amount: 200 });
+    expect(overVerdict.verdict).toBe("requires_approval");
+    const withinVerdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "credit", orderId: "o1", amount: 100 });
+    expect(withinVerdict.verdict).toBe("allow");
+  });
+
+  it("leaves refund verdicts unchanged by prior credits", () => {
+    seedOrder(db, { amount: 300 });
+    seedPayment(db, "pay_credit2", "o1", "credit", 300);
+    const verdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "refund", orderId: "o1", amount: 300 });
+    expect(verdict.verdict).toBe("allow");
   });
 
   it("is impervious to policy caps regardless of the stated reason (jailbreak-proofing)", () => {

@@ -45,6 +45,19 @@ function refundableBalance(db: Database.Database, orderId: string): number {
   return charged.total - refunded.total;
 }
 
+function creditableBalance(db: Database.Database, orderId: string): number {
+  const charged = db
+    .prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE order_id = ? AND type = 'charge' AND status = 'succeeded'`)
+    .get(orderId) as { total: number };
+  const refunded = db
+    .prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE order_id = ? AND type = 'refund' AND status = 'succeeded'`)
+    .get(orderId) as { total: number };
+  const credited = db
+    .prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE order_id = ? AND type = 'credit' AND status = 'succeeded'`)
+    .get(orderId) as { total: number };
+  return charged.total - refunded.total - credited.total;
+}
+
 function daysBetween(fromIso: string, toIso: string): number {
   const ms = new Date(toIso).getTime() - new Date(fromIso).getTime();
   return ms / (1000 * 60 * 60 * 24);
@@ -55,6 +68,10 @@ function daysBetween(fromIso: string, toIso: string): number {
 // layer that makes the money path jailbreak-proof: it never reads the
 // model's reasoning or claimed authority, only order/payment facts and the
 // policy.json caps. Called by the ledger pipeline BEFORE any ledger write.
+// A credit tied to an order is additionally bounded by that order's
+// creditable balance (charged minus refunds and credits already issued),
+// and a credit with no order at all always requires approval, since without
+// an order there is nothing to bound it against.
 export function evaluatePolicy(
   db: Database.Database,
   policy: PolicyDocument,
@@ -112,6 +129,25 @@ export function evaluatePolicy(
         };
       }
     }
+
+    if (input.actionType === "credit") {
+      // Clamped at zero so an order already over-credited before this bound
+      // existed reads as "balance 0", not a negative number, in the reason.
+      const available = Math.max(0, creditableBalance(db, input.orderId));
+      if (input.amount > available) {
+        return {
+          verdict: "requires_approval",
+          reason: `Requested credit ${input.amount} exceeds the creditable balance of ${available} on this order (charged minus refunds and credits already issued) and requires human approval.`,
+        };
+      }
+    }
+  }
+
+  if (input.actionType === "credit" && !input.orderId) {
+    return {
+      verdict: "requires_approval",
+      reason: "Credit is not tied to an order, so it cannot be checked against what that order was charged; it requires human approval.",
+    };
   }
 
   const cap = input.actionType === "refund" ? policy.maxAutoRefundINR : policy.maxAutoCreditINR;
