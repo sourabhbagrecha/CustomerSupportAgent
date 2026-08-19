@@ -47,13 +47,14 @@ export function PersonaPanel({
         </select>
       </section>
 
-      <section>
+      <section className="fault-section">
         <div className="fault-header">
           <h2>Fault toggles</h2>
           <button type="button" className="secondary-button" onClick={onClearFaults} disabled={faultsBusy}>
             Clear all
           </button>
         </div>
+        <p className="fault-caption">Demo-only fault injection; unauthenticated in this single-tenant demo.</p>
         <ul className="fault-list">
           {FAULT_NAMES.map((name) => {
             const state = faults[name];

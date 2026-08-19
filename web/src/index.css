@@ -45,9 +45,71 @@ body {
   border-radius: 8px;
   padding: 14px;
   min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+}
+
+/* Responsive breakpoints for .app-layout. Desktop keeps the fixed four-column
+   grid (History, Persona, Chat, Trace, matching web/src/App.tsx's DOM order).
+   At <=1200px (tablet) that collapses to two columns: a narrow left column
+   (History over Persona) beside a main column (Chat over Trace), using the
+   `order` property so no DOM/JSX reordering is needed. At <=760px (phone)
+   everything stacks single-column, reordered chat first (the approval status
+   strip lives inside the chat panel already), then trace, then history, then
+   persona, each capped to a max-height with its own internal scroll so a
+   phone user can still reach every panel by scrolling the page between them. */
+@media (max-width: 1200px) {
+  .app-layout {
+    grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .history-panel {
+    order: 1;
+  }
+
+  .chat-panel {
+    order: 2;
+  }
+
+  .persona-panel {
+    order: 3;
+  }
+
+  .trace-panel {
+    order: 4;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-rows: auto;
+  }
+
+  .chat-panel {
+    order: 1;
+    max-height: 70vh;
+  }
+
+  .trace-panel {
+    order: 2;
+  }
+
+  .history-panel {
+    order: 3;
+  }
+
+  .persona-panel {
+    order: 4;
+  }
+
+  .panel {
+    max-height: 60vh;
+  }
 }
 
 .panel h2 {
@@ -73,6 +135,16 @@ body {
   font-size: 13px;
 }
 
+/* Visually segregated as a demo/debug control block, distinct from the
+   persona picker above it: dashed border, muted background, one-line caption.
+   No RBAC or route gating here, just a visual signal (docs/plans/005 phase 6). */
+.fault-section {
+  border: 1px dashed #c7cbd1;
+  background: #f8f9fb;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
 .fault-header {
   display: flex;
   align-items: center;
@@ -82,6 +154,13 @@ body {
 
 .fault-header h2 {
   margin: 0;
+}
+
+.fault-caption {
+  margin: 0 0 10px;
+  font-size: 11px;
+  color: #8a919c;
+  font-style: italic;
 }
 
 .fault-list {
