@@ -190,3 +190,20 @@ export const EscalateToHumanOutputSchema = z.object({
   summary: z.string(),
 });
 export type EscalateToHumanOutput = z.infer<typeof EscalateToHumanOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// Raw mock-provider result (Phase 3 runtime output validation). This is the
+// single source of truth for the shape issueMoneyMovement (mockApi.ts)
+// returns; that file derives its MoneyCallResult type from this schema
+// instead of declaring a parallel interface. The ledger pipeline parses the
+// raw provider result against this schema before trusting it (see
+// callRawMockApi in ledger/pipeline.ts): a malformed response is treated as
+// an uncertain outcome, exactly like a timeout, never as data to coerce and
+// move on from.
+// ---------------------------------------------------------------------------
+
+export const RawPaymentResultSchema = z.object({
+  paymentId: z.string().min(1),
+  providerReference: z.string(),
+});
+export type RawPaymentResult = z.infer<typeof RawPaymentResultSchema>;

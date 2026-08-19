@@ -1,10 +1,11 @@
 import type Database from "better-sqlite3";
+import { ZodError } from "zod";
 import { emitEvent } from "../events/emitter.js";
 import { evaluatePolicy } from "../policy/engine.js";
 import type { PolicyDocument } from "../policy/schemas.js";
-import { ToolTimeoutError } from "../tools/errors.js";
+import { compactZodIssues, ToolTimeoutError } from "../tools/errors.js";
 import { getPayments, issueCreditRaw, issueRefundRaw, type MoneyCallResult } from "../tools/mockApi.js";
-import type { ActionType, MoneyActionResult } from "../tools/schemas.js";
+import { RawPaymentResultSchema, type ActionType, type MoneyActionResult } from "../tools/schemas.js";
 import { insertApproval } from "./approvals.js";
 import { deriveIdempotencyKey } from "./idempotency.js";
 import { findLedgerByIdempotencyKey, insertLedgerRow, updateLedgerStatus, type LedgerRow } from "./store.js";
@@ -41,6 +42,11 @@ export function mapRowToResult(row: LedgerRow): MoneyActionResult {
     orderId: row.orderId,
   };
   const raw = parseRaw(row.rawResponse);
+  // The String(raw.paymentId ?? "") coercion below is defensive, not the
+  // primary guard: as of Phase 3, callRawMockApi parses the raw provider
+  // result with RawPaymentResultSchema before it is ever persisted, so a row
+  // written from here on always has a well-formed paymentId. This stays only
+  // to read back rows persisted before that validation existed.
   switch (row.status) {
     case "succeeded":
       return {
@@ -70,25 +76,34 @@ export function mapRowToResult(row: LedgerRow): MoneyActionResult {
   }
 }
 
-function callRawMockApi(
+// Parses the raw provider response with RawPaymentResultSchema before
+// anything downstream trusts it. A malformed response throws ZodError, which
+// attemptAndHandle below routes exactly like a ToolTimeoutError: an uncertain
+// outcome (the provider may have moved money but the response is unreadable)
+// that must reconcile via get_payments before any retry, never a blind
+// retry with a fresh key.
+async function callRawMockApi(
   db: Database.Database,
   row: Pick<LedgerRow, "actionType" | "orderId" | "customerId" | "amount" | "idempotencyKey">,
 ): Promise<MoneyCallResult> {
+  let raw: MoneyCallResult;
   if (row.actionType === "refund") {
     if (!row.orderId) throw new Error("Refund requires an orderId; this should have been denied by policy.");
-    return issueRefundRaw(db, {
+    raw = await issueRefundRaw(db, {
+      orderId: row.orderId,
+      customerId: row.customerId,
+      amount: row.amount,
+      idempotencyKey: row.idempotencyKey,
+    });
+  } else {
+    raw = await issueCreditRaw(db, {
       orderId: row.orderId,
       customerId: row.customerId,
       amount: row.amount,
       idempotencyKey: row.idempotencyKey,
     });
   }
-  return issueCreditRaw(db, {
-    orderId: row.orderId,
-    customerId: row.customerId,
-    amount: row.amount,
-    idempotencyKey: row.idempotencyKey,
-  });
+  return RawPaymentResultSchema.parse(raw);
 }
 
 // Section 7 step 5: on timeout/unknown, reconcile via get_payments before any
@@ -158,6 +173,18 @@ async function attemptAndHandle(
         threadId: row.threadId,
         type: "fault",
         payload: { fault: "refund_timeout_after_success", ledgerId: row.id, message: err.message },
+      });
+      return await reconcileAndFinalize(db, row);
+    }
+    if (err instanceof ZodError) {
+      // The provider's response failed RawPaymentResultSchema validation:
+      // an uncertain outcome, not a confirmed failure. The provider may have
+      // moved money and returned a garbled response, so this is treated
+      // exactly like ToolTimeoutError above, never as grounds to retry blind.
+      emitEvent(db, {
+        threadId: row.threadId,
+        type: "error",
+        payload: { stage: "provider_response_validation", ledgerId: row.id, issues: compactZodIssues(err) },
       });
       return await reconcileAndFinalize(db, row);
     }

@@ -1,10 +1,25 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type Database from "better-sqlite3";
 import { openDb, applySchema } from "../db/client.js";
 import { clearAllFaults, setFault } from "../faults/registry.js";
 import type { PolicyDocument } from "../policy/schemas.js";
+import { issueRefundRaw } from "../tools/mockApi.js";
 import { getPendingApprovalForThread } from "./approvals.js";
 import { resolveApprovedAction, resolveRejectedAction, runMoneyAction } from "./pipeline.js";
+
+// Phase 3 (docs/plans/005) provider-response-validation coverage needs a way
+// to make the raw mock provider return a malformed shape without a
+// production fault seam for it (the fault registry only injects thrown
+// errors, e.g. refund_timeout_after_success, never a bad return value).
+// vitest hoists this vi.mock call above the imports above at transform time,
+// so it wraps the real implementation before pipeline.ts's own import of it
+// resolves. Every existing test in this file still exercises the real mock
+// provider; only the one test below overrides it, once, via
+// mockImplementationOnce.
+vi.mock("../tools/mockApi.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tools/mockApi.js")>();
+  return { ...actual, issueRefundRaw: vi.fn(actual.issueRefundRaw) };
+});
 
 const POLICY: PolicyDocument = {
   maxAutoRefundINR: 500,
@@ -148,6 +163,58 @@ describe("runMoneyAction", () => {
     });
     expect(replay.status).toBe("reconciled");
     expect(countPayments(db, "o5", "refund")).toBe(1);
+  });
+
+  it("a malformed provider response (fails RawPaymentResultSchema) reconciles to exactly one payment, never a blind retry", async () => {
+    seedOrder(db, "o12", 400);
+
+    vi.mocked(issueRefundRaw).mockImplementationOnce(async (dbArg, params) => {
+      // Simulate the provider having actually moved money but returned an
+      // unreadable response (paymentId missing entirely), mirroring how
+      // refund_timeout_after_success is injected in mockApi.ts AFTER the
+      // real payment row is already committed: the uncertainty is in the
+      // response, not in whether money moved.
+      dbArg
+        .prepare(
+          `INSERT INTO payments (id, order_id, customer_id, amount, currency, type, status, idempotency_key, provider_reference, created_at)
+           VALUES (@id, @orderId, @customerId, @amount, 'INR', 'refund', 'succeeded', @idempotencyKey, @providerReference, @createdAt)`,
+        )
+        .run({
+          id: "pay_malformed_test",
+          orderId: params.orderId,
+          customerId: params.customerId,
+          amount: params.amount,
+          idempotencyKey: params.idempotencyKey,
+          providerReference: "prov_malformed_test",
+          createdAt: new Date().toISOString(),
+        });
+      // Malformed: no paymentId field at all, so RawPaymentResultSchema.parse
+      // in callRawMockApi (pipeline.ts) throws a ZodError.
+      return { providerReference: "prov_malformed_test" } as unknown as Awaited<ReturnType<typeof issueRefundRaw>>;
+    });
+
+    const result = await runMoneyAction(db, POLICY, {
+      threadId: "t12",
+      customerId: "c1",
+      actionType: "refund",
+      orderId: "o12",
+      amount: 400,
+      reason: "test malformed provider response",
+    });
+
+    expect(result.status).toBe("reconciled");
+    expect(countPayments(db, "o12", "refund")).toBe(1);
+
+    const ledgerRow = db.prepare(`SELECT status FROM actions_ledger WHERE thread_id = 't12'`).get() as { status: string };
+    expect(ledgerRow.status).toBe("reconciled");
+
+    const errorEvents = db
+      .prepare(`SELECT payload FROM events WHERE thread_id = 't12' AND type = 'error'`)
+      .all() as Array<{ payload: string }>;
+    const validationEvent = errorEvents
+      .map((e) => JSON.parse(e.payload) as { stage?: string })
+      .find((p) => p.stage === "provider_response_validation");
+    expect(validationEvent).toBeDefined();
   });
 
   it("resolveApprovedAction completes the money movement for an approved ledger row", async () => {

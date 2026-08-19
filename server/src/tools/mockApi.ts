@@ -9,6 +9,7 @@ import type {
   Order,
   Payment,
   PolicyChunkHit,
+  RawPaymentResult,
 } from "./schemas.js";
 
 function sleep(ms: number): Promise<void> {
@@ -244,10 +245,10 @@ export async function searchPolicy(db: Database.Database, query: string, limit =
 // move money."
 // ---------------------------------------------------------------------------
 
-export interface MoneyCallResult {
-  paymentId: string;
-  providerReference: string;
-}
+// RawPaymentResultSchema (schemas.ts) is the single source of truth for this
+// shape; this is a type alias, not a parallel hand-written interface, so the
+// two cannot drift apart.
+export type MoneyCallResult = RawPaymentResult;
 
 function findByIdempotencyKey(db: Database.Database, idempotencyKey: string): MoneyCallResult | undefined {
   const row = db.prepare(`SELECT id, provider_reference FROM payments WHERE idempotency_key = ?`).get(idempotencyKey) as

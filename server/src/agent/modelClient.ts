@@ -64,6 +64,35 @@ function chunkText(content: AIMessageChunk["content"]): string {
     .join("");
 }
 
+// Replaces a naked `as unknown as AIMessage` cast on the accumulated stream
+// chunk with a structural check. This is a plain runtime check, not Zod,
+// because the value is a LangChain class instance (AIMessageChunk), not a
+// plain JSON boundary value. Thrown inside callWithRetry's existing try
+// block, so a malformed response goes through the exact same retry/backoff
+// and primary-to-fallback failover ladder, and emits the same `error` event,
+// as any other model-call failure; no new code path is introduced.
+function assertValidAIMessageShape(message: AIMessageChunk): void {
+  const content = message.content;
+  if (typeof content !== "string" && !Array.isArray(content)) {
+    throw new Error(`Model response has a malformed content field: expected a string or array, got ${typeof content}.`);
+  }
+  const toolCalls = message.tool_calls;
+  if (toolCalls !== undefined) {
+    if (!Array.isArray(toolCalls)) {
+      throw new Error("Model response has a malformed tool_calls field: expected an array.");
+    }
+    for (const call of toolCalls) {
+      const name = (call as { name?: unknown } | null | undefined)?.name;
+      const args = (call as { args?: unknown } | null | undefined)?.args;
+      if (typeof name !== "string" || typeof args !== "object" || args === null) {
+        throw new Error(
+          "Model response has a malformed tool call: expected { name: string, args: object } for every entry in tool_calls.",
+        );
+      }
+    }
+  }
+}
+
 interface CallOnceParams {
   role: "primary" | "fallback";
   model: string;
@@ -91,6 +120,7 @@ async function callWithRetry({ role, model, messages, tools, threadId, db }: Cal
       }
       publishStreamEvent(threadId, { type: "end" });
       if (!accumulated) throw new Error("Model stream produced no chunks.");
+      assertValidAIMessageShape(accumulated);
       const result = accumulated as unknown as AIMessage;
       emitEvent(db, {
         threadId,
