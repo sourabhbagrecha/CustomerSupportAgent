@@ -6,10 +6,12 @@ import { fileURLToPath } from "node:url";
 import Fastify from "fastify";
 import fastifyCors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
+import type { StateSnapshot } from "@langchain/langgraph";
+import type Database from "better-sqlite3";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
-import { buildAgentGraph } from "./agent/graph.js";
+import { buildAgentGraph, type AgentGraph } from "./agent/graph.js";
 import { appendDecisionNotice, buildDecisionNotice } from "./agent/notify.js";
-import { runTurn, resumeApprovalTurn } from "./agent/runTurn.js";
+import { runTurn, resumeApprovalTurn, type RunTurnResult } from "./agent/runTurn.js";
 import type { AgentState } from "./agent/state.js";
 import { getDb } from "./db/client.js";
 import { emitEvent, listEventsForThread, subscribe, subscribeStream } from "./events/emitter.js";
@@ -18,7 +20,9 @@ import {
   getApprovalById,
   getPendingApprovalForThread,
   listPendingApprovals,
-  resolveApproval,
+  markApprovalExecuted,
+  resolveApprovalWithDecisionEvent,
+  type ApprovalRow,
 } from "./ledger/approvals.js";
 import { mapRowToResult, resolveApprovedAction, resolveRejectedAction } from "./ledger/pipeline.js";
 import { countLedgerRows, getLedgerById, listLedgerRows } from "./ledger/store.js";
@@ -165,6 +169,99 @@ app.get("/api/approvals/pending", async () => {
   return { approvals };
 });
 
+// A graph interrupt() only pauses at the "tools" node, so `next` naming a
+// queued node and `tasks[].interrupts` carrying the interrupt payload are two
+// independent signals of the same fact; requiring both is how "still
+// actually paused" is told apart from "already ran to completion" on a
+// retry after an earlier resume finished but the response never made it back
+// (crash, or the process died before markApprovalExecuted ran).
+function isGraphPausedAtInterrupt(snapshot: StateSnapshot): boolean {
+  return snapshot.next.length > 0 && snapshot.tasks.some((task) => Array.isArray(task.interrupts) && task.interrupts.length > 0);
+}
+
+function decisionMatchesStoredStatus(decision: "approve" | "reject", status: ApprovalRow["status"]): boolean {
+  return (decision === "approve" && status === "approved") || (decision === "reject" && status === "rejected");
+}
+
+// The execute step of the approval state machine: pending -> approved/rejected
+// (decision recorded, executed_at still null) -> executed_at set (the effect
+// has actually been applied). Only called once the decision itself is already
+// durably recorded (either just now via the CAS resolve, or on an earlier
+// attempt this call is retrying), so every code path below is safe to re-run.
+async function executeApprovalDecision(params: {
+  db: Database.Database;
+  graph: AgentGraph;
+  approval: ApprovalRow;
+  decision: "approve" | "reject";
+  remarkText: string | null;
+  threadId: string;
+}): Promise<RunTurnResult> {
+  const { db: database, graph: agentGraph, approval, decision, remarkText, threadId } = params;
+  let result: RunTurnResult;
+
+  if (approval.kind === "policy_approval") {
+    const snapshot = await agentGraph.getState({ configurable: { thread_id: threadId, db: database } });
+    if (isGraphPausedAtInterrupt(snapshot)) {
+      // The graph is paused at an issue_refund/issue_credit interrupt();
+      // resuming it lets the agent's own turn finish (it may still need to
+      // say more to the customer), and the remark travels with the resume
+      // so it lands in the ledger row's reason (see agentTools.ts).
+      result = await resumeApprovalTurn({
+        db: database,
+        graph: agentGraph,
+        threadId,
+        customerId: approval.customerId,
+        decision,
+        remark: remarkText,
+      });
+    } else {
+      // No pending interrupt: the resume already ran to completion on an
+      // earlier attempt before this request's predecessor crashed. There is
+      // nothing left to resume into, so build the response from the ledger
+      // row's own terminal state instead of invoking the graph again.
+      const ledgerRow = approval.ledgerId ? getLedgerById(database, approval.ledgerId) : undefined;
+      const moneyResult = ledgerRow ? mapRowToResult(ledgerRow) : null;
+      const notice = buildDecisionNotice({ approval, decision, moneyResult, remark: remarkText });
+      result = { reply: notice, status: "resolved", degraded: false };
+    }
+    if (remarkText) {
+      const moneyResult = approval.ledgerId ? mapRowToResult(getLedgerById(database, approval.ledgerId)!) : null;
+      const notice = buildDecisionNotice({ approval, decision, moneyResult, remark: remarkText });
+      await appendDecisionNotice(database, agentGraph, threadId, notice);
+    }
+  } else {
+    // kind === "escalation": the agent's turn already completed by the time
+    // this got reviewed, so there is no interrupt() to resume. Act on the
+    // ledger row directly (same idempotency key, first real external call
+    // either way, per pipeline.ts) and notify the customer out of band. Safe
+    // to re-run on a retry: re-denying is harmless, and a re-approval reuses
+    // the ledger row's existing idempotency key so money cannot move twice.
+    let moneyResult: MoneyActionResult | null = null;
+    if (approval.ledgerId) {
+      const ledgerRow = getLedgerById(database, approval.ledgerId);
+      if (!ledgerRow) throw new Error(`Ledger row ${approval.ledgerId} referenced by approval ${approval.id} not found.`);
+      moneyResult =
+        decision === "approve"
+          ? await resolveApprovedAction(database, ledgerRow, remarkText, "Exception granted by human reviewer")
+          : resolveRejectedAction(database, ledgerRow, remarkText, "Denial upheld by human reviewer");
+    }
+    const notice = buildDecisionNotice({ approval, decision, moneyResult, remark: remarkText });
+    await appendDecisionNotice(database, agentGraph, threadId, notice);
+    result = { reply: notice, status: "resolved", degraded: false };
+  }
+
+  // Only mark executed, and only emit the terminal event, once the effect
+  // above has actually happened; on the accepted duplicate-notice residual
+  // risk (README known failure modes), see the "not paused" branch above.
+  markApprovalExecuted(database, approval.id);
+  emitEvent(database, {
+    threadId,
+    type: "guardrail",
+    payload: { stage: "approval_execution", approvalId: approval.id, kind: approval.kind, outcome: "executed" },
+  });
+  return result;
+}
+
 app.post<{ Params: { threadId: string; approvalId: string }; Body: unknown }>(
   "/api/threads/:threadId/approvals/:approvalId/resolve",
   async (request, reply) => {
@@ -176,57 +273,59 @@ app.post<{ Params: { threadId: string; approvalId: string }; Body: unknown }>(
     if (!approval || approval.threadId !== request.params.threadId) {
       return reply.code(404).send({ error: "Approval not found for this thread." });
     }
-    if (approval.status !== "pending") {
-      return reply.code(409).send({ error: `Approval already ${approval.status}.` });
-    }
 
     const { decision, remark } = parsed.data;
     const remarkText = remark && remark.length > 0 ? remark : null;
     const threadId = request.params.threadId;
 
     try {
-      // Record the human's decision on the approvals row itself before
-      // acting on it: this is what makes the queue row disappear,
-      // independent of whatever the downstream money outcome
-      // (succeeded/reconciled/failed_unknown) turns out to be in the ledger.
-      resolveApproval(db, approvalId, decision === "approve" ? "approved" : "rejected", remarkText);
-      emitEvent(db, {
-        threadId,
-        type: "guardrail",
-        payload: { stage: "human_decision", approvalId, kind: approval.kind, decision, remark: remarkText },
-      });
+      let resolvedApproval: ApprovalRow;
 
-      if (approval.kind === "policy_approval") {
-        // The graph is paused at an issue_refund/issue_credit interrupt();
-        // resuming it lets the agent's own turn finish (it may still need to
-        // say more to the customer), and the remark travels with the resume
-        // so it lands in the ledger row's reason (see agentTools.ts).
-        const result = await resumeApprovalTurn({ db, graph, threadId, customerId: approval.customerId, decision, remark: remarkText });
-        if (remarkText) {
-          const moneyResult = approval.ledgerId ? mapRowToResult(getLedgerById(db, approval.ledgerId)!) : null;
-          const notice = buildDecisionNotice({ approval, decision, moneyResult, remark: remarkText });
-          await appendDecisionNotice(db, graph, threadId, notice);
+      if (approval.status !== "pending") {
+        if (approval.executedAt) {
+          return reply.code(409).send({ error: `Approval already ${approval.status}.` });
         }
-        return result;
+        if (!decisionMatchesStoredStatus(decision, approval.status)) {
+          return reply
+            .code(409)
+            .send({ error: `The decision was already recorded as ${approval.status} and cannot be changed.` });
+        }
+        // Resolved but never executed: a crash (or a 500 from this very
+        // route) happened after the decision was durably recorded but before
+        // markApprovalExecuted ran. Retry the execute step only; re-running
+        // the CAS resolve would be a no-op anyway since the row is no longer
+        // pending, so skip straight past it.
+        emitEvent(db, {
+          threadId,
+          type: "guardrail",
+          payload: { stage: "approval_execution_retry", approvalId, kind: approval.kind, decision },
+        });
+        resolvedApproval = approval;
+      } else {
+        // Record the human's decision on the approvals row itself before
+        // acting on it: this is what makes the queue row disappear,
+        // independent of whatever the downstream money outcome
+        // (succeeded/reconciled/failed_unknown) turns out to be in the
+        // ledger. The compare-and-set update and the human_decision event
+        // commit together in one transaction, closing the TOCTOU window
+        // between the status check above and this write: a concurrent
+        // resolver racing this request either wins the CAS (and this request
+        // 409s below) or loses it (and that request 409s instead).
+        const resolved = resolveApprovalWithDecisionEvent(db, {
+          approvalId,
+          status: decision === "approve" ? "approved" : "rejected",
+          remark: remarkText,
+          threadId,
+          kind: approval.kind,
+          decision,
+        });
+        if (!resolved) {
+          return reply.code(409).send({ error: "Approval already resolved." });
+        }
+        resolvedApproval = resolved;
       }
 
-      // kind === "escalation": the agent's turn already completed by the time
-      // this got reviewed, so there is no interrupt() to resume. Act on the
-      // ledger row directly (same idempotency key, first real external call
-      // either way, per pipeline.ts) and notify the customer out of band.
-      let moneyResult: MoneyActionResult | null = null;
-      if (approval.ledgerId) {
-        const ledgerRow = getLedgerById(db, approval.ledgerId);
-        if (!ledgerRow) throw new Error(`Ledger row ${approval.ledgerId} referenced by approval ${approvalId} not found.`);
-        moneyResult =
-          decision === "approve"
-            ? await resolveApprovedAction(db, ledgerRow, remarkText, "Exception granted by human reviewer")
-            : resolveRejectedAction(db, ledgerRow, remarkText, "Denial upheld by human reviewer");
-      }
-
-      const notice = buildDecisionNotice({ approval, decision, moneyResult, remark: remarkText });
-      await appendDecisionNotice(db, graph, threadId, notice);
-      return { reply: notice, status: "resolved" as const, degraded: false };
+      return await executeApprovalDecision({ db, graph, approval: resolvedApproval, decision, remarkText, threadId });
     } catch (err) {
       request.log.error(err);
       emitEvent(db, {
@@ -234,7 +333,9 @@ app.post<{ Params: { threadId: string; approvalId: string }; Body: unknown }>(
         type: "error",
         payload: { stage: "approval_resolve_route", message: err instanceof Error ? err.message : String(err) },
       });
-      return reply.code(500).send({ error: "Failed to resolve approval." });
+      return reply
+        .code(500)
+        .send({ error: "Decision recorded but execution failed; retry the same decision to complete it." });
     }
   },
 );

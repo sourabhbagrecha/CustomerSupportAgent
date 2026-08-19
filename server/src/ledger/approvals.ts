@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { emitEvent } from "../events/emitter.js";
 import type { ActionType } from "../tools/schemas.js";
 
 export type ApprovalStatus = "pending" | "approved" | "rejected";
@@ -22,6 +23,7 @@ export interface ApprovalRow {
   createdAt: string;
   resolvedAt: string | null;
   resolvedBy: string | null;
+  executedAt: string | null;
 }
 
 interface ApprovalRowSql {
@@ -42,6 +44,7 @@ interface ApprovalRowSql {
   created_at: string;
   resolved_at: string | null;
   resolved_by: string | null;
+  executed_at: string | null;
 }
 
 function fromSql(row: ApprovalRowSql): ApprovalRow {
@@ -63,6 +66,7 @@ function fromSql(row: ApprovalRowSql): ApprovalRow {
     createdAt: row.created_at,
     resolvedAt: row.resolved_at,
     resolvedBy: row.resolved_by,
+    executedAt: row.executed_at,
   };
 }
 
@@ -125,24 +129,85 @@ export function listPendingApprovals(db: Database.Database): ApprovalRow[] {
   return rows.map(fromSql);
 }
 
+// Compare-and-set resolve: the UPDATE only takes effect if the row is still
+// `pending`, closing the TOCTOU window between an earlier read-then-check and
+// this write. `info.changes === 0` means a concurrent resolver already won
+// the race, so this returns `undefined` rather than the (unmodified) row;
+// callers must treat that as "someone else resolved this" and 409.
 export function resolveApproval(
   db: Database.Database,
   id: number,
   status: "approved" | "rejected",
   remark: string | null = null,
   resolvedBy: string = "human_agent",
-): ApprovalRow {
+): ApprovalRow | undefined {
   const resolvedAt = new Date().toISOString();
-  db.prepare(
-    `UPDATE approvals SET status = @status, remark = @remark, resolved_at = @resolvedAt, resolved_by = @resolvedBy WHERE id = @id`,
-  ).run({
-    id,
-    status,
-    remark,
-    resolvedAt,
-    resolvedBy,
-  });
+  const info = db
+    .prepare(
+      `UPDATE approvals SET status = @status, remark = @remark, resolved_at = @resolvedAt, resolved_by = @resolvedBy
+        WHERE id = @id AND status = 'pending'`,
+    )
+    .run({
+      id,
+      status,
+      remark,
+      resolvedAt,
+      resolvedBy,
+    });
+  if (info.changes === 0) return undefined;
   const row = getApprovalById(db, id);
   if (!row) throw new Error(`Approval row ${id} disappeared after update`);
   return row;
+}
+
+// Marks the post-decision execution (graph resume, or ledger action plus
+// customer notice) as actually completed. Idempotent by construction: the
+// `executed_at IS NULL` guard means a second call (e.g. a duplicate retry
+// racing itself) is a no-op and reports false rather than clobbering the
+// first timestamp.
+export function markApprovalExecuted(db: Database.Database, id: number): boolean {
+  const executedAt = new Date().toISOString();
+  const info = db
+    .prepare(`UPDATE approvals SET executed_at = @executedAt WHERE id = @id AND executed_at IS NULL`)
+    .run({ id, executedAt });
+  return info.changes === 1;
+}
+
+export interface ResolveApprovalWithDecisionEventInput {
+  approvalId: number;
+  status: "approved" | "rejected";
+  remark: string | null;
+  resolvedBy?: string;
+  threadId: string;
+  kind: ApprovalKind;
+  decision: "approve" | "reject";
+}
+
+// Wraps the CAS resolve and the `human_decision` guardrail event in one
+// better-sqlite3 transaction (synchronous; no `await` may ever appear inside
+// it) so the two writes commit or fail together: a crash between them would
+// otherwise leave a resolved approval with no audit trail of the decision, or
+// vice versa. Returns the resolved row, or `undefined` (writing neither the
+// row nor the event) when the approval was no longer pending.
+export function resolveApprovalWithDecisionEvent(
+  db: Database.Database,
+  input: ResolveApprovalWithDecisionEventInput,
+): ApprovalRow | undefined {
+  const run = db.transaction(() => {
+    const row = resolveApproval(db, input.approvalId, input.status, input.remark, input.resolvedBy);
+    if (!row) return undefined;
+    emitEvent(db, {
+      threadId: input.threadId,
+      type: "guardrail",
+      payload: {
+        stage: "human_decision",
+        approvalId: input.approvalId,
+        kind: input.kind,
+        decision: input.decision,
+        remark: input.remark,
+      },
+    });
+    return row;
+  });
+  return run();
 }

@@ -51,6 +51,7 @@ export interface ApprovalRow {
   createdAt: string;
   resolvedAt: string | null;
   resolvedBy: string | null;
+  executedAt: string | null;
 }
 
 // GET /api/approvals/pending: an ApprovalRow plus the persona lookup the server

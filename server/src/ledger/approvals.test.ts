@@ -1,7 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type Database from "better-sqlite3";
 import { applySchema, openDb } from "../db/client.js";
-import { insertApproval, listPendingApprovals, resolveApproval, type ApprovalRow } from "./approvals.js";
+import {
+  getApprovalById,
+  insertApproval,
+  listPendingApprovals,
+  markApprovalExecuted,
+  resolveApproval,
+  resolveApprovalWithDecisionEvent,
+  type ApprovalRow,
+} from "./approvals.js";
 import { insertLedgerRow } from "./store.js";
 
 function seedParents(db: Database.Database) {
@@ -66,9 +74,11 @@ describe("listPendingApprovals", () => {
     addPending(db, "t2", 900);
 
     const resolved = resolveApproval(db, first.id, "approved");
-    expect(resolved.status).toBe("approved");
-    expect(resolved.resolvedBy).toBe("human_agent");
-    expect(resolved.resolvedAt).not.toBeNull();
+    expect(resolved).toBeDefined();
+    expect(resolved?.status).toBe("approved");
+    expect(resolved?.resolvedBy).toBe("human_agent");
+    expect(resolved?.resolvedAt).not.toBeNull();
+    expect(resolved?.executedAt).toBeNull();
 
     expect(listPendingApprovals(db).map((a) => a.threadId)).toEqual(["t2"]);
   });
@@ -138,8 +148,98 @@ describe("escalation kind", () => {
       context: "Customer said they will contact their lawyer.",
     });
     const resolved = resolveApproval(db, approval.id, "rejected", "Handed off to the legal team directly.");
-    expect(resolved.status).toBe("rejected");
-    expect(resolved.remark).toBe("Handed off to the legal team directly.");
+    expect(resolved?.status).toBe("rejected");
+    expect(resolved?.remark).toBe("Handed off to the legal team directly.");
     expect(listPendingApprovals(db)).toEqual([]);
+  });
+});
+
+describe("resolveApproval compare-and-set", () => {
+  it("loses a concurrent second resolve: returns undefined and leaves the row exactly as the first resolver left it", () => {
+    const approval = addPending(db, "t1", 1500);
+
+    const first = resolveApproval(db, approval.id, "approved", "First reviewer note.");
+    expect(first).toBeDefined();
+
+    // Simulates a second reviewer racing the first: same row, already
+    // resolved by the time this UPDATE's WHERE clause evaluates.
+    const second = resolveApproval(db, approval.id, "rejected", "Second reviewer note.");
+    expect(second).toBeUndefined();
+
+    const row = getApprovalById(db, approval.id);
+    expect(row?.status).toBe(first?.status);
+    expect(row?.remark).toBe(first?.remark);
+    expect(row?.resolvedBy).toBe(first?.resolvedBy);
+    expect(row?.resolvedAt).toBe(first?.resolvedAt);
+  });
+});
+
+describe("markApprovalExecuted", () => {
+  it("returns true the first time and sets executed_at, then false on a second call without changing it", () => {
+    const approval = addPending(db, "t1", 1500);
+    resolveApproval(db, approval.id, "approved");
+
+    const firstCall = markApprovalExecuted(db, approval.id);
+    expect(firstCall).toBe(true);
+    const afterFirst = getApprovalById(db, approval.id);
+    expect(afterFirst?.executedAt).not.toBeNull();
+
+    const secondCall = markApprovalExecuted(db, approval.id);
+    expect(secondCall).toBe(false);
+    const afterSecond = getApprovalById(db, approval.id);
+    expect(afterSecond?.executedAt).toBe(afterFirst?.executedAt);
+  });
+});
+
+describe("resolveApprovalWithDecisionEvent", () => {
+  function countEvents(database: Database.Database, threadId: string): number {
+    const row = database
+      .prepare(`SELECT COUNT(*) AS n FROM events WHERE thread_id = ?`)
+      .get(threadId) as { n: number };
+    return row.n;
+  }
+
+  it("writes both the resolved row and the human_decision event atomically when the approval is pending", () => {
+    const approval = addPending(db, "t1", 1500);
+    expect(countEvents(db, "t1")).toBe(0);
+
+    const row = resolveApprovalWithDecisionEvent(db, {
+      approvalId: approval.id,
+      status: "approved",
+      remark: null,
+      threadId: "t1",
+      kind: approval.kind,
+      decision: "approve",
+    });
+
+    expect(row?.status).toBe("approved");
+    expect(countEvents(db, "t1")).toBe(1);
+    const events = db.prepare(`SELECT type, payload FROM events WHERE thread_id = ?`).all("t1") as Array<{
+      type: string;
+      payload: string;
+    }>;
+    expect(events[0]?.type).toBe("guardrail");
+    expect(JSON.parse(events[0]!.payload)).toMatchObject({ stage: "human_decision", approvalId: approval.id, decision: "approve" });
+  });
+
+  it("writes neither the row update nor the event when the approval is no longer pending", () => {
+    const approval = addPending(db, "t1", 1500);
+    resolveApproval(db, approval.id, "approved");
+    expect(countEvents(db, "t1")).toBe(0);
+
+    const row = resolveApprovalWithDecisionEvent(db, {
+      approvalId: approval.id,
+      status: "rejected",
+      remark: "Too late.",
+      threadId: "t1",
+      kind: approval.kind,
+      decision: "reject",
+    });
+
+    expect(row).toBeUndefined();
+    expect(countEvents(db, "t1")).toBe(0);
+    const unchanged = getApprovalById(db, approval.id);
+    expect(unchanged?.status).toBe("approved");
+    expect(unchanged?.remark).toBeNull();
   });
 });
