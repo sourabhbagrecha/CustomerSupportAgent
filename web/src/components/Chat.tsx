@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from "react";
-import { formatAmount } from "../format";
 import type { ApprovalRow, ChatMessage } from "../types";
 
 interface ChatProps {
@@ -7,11 +6,19 @@ interface ChatProps {
   messages: ChatMessage[];
   pendingApproval: ApprovalRow | null;
   sending: boolean;
-  resolvingApproval: boolean;
   streamingReply: string;
   error: string | null;
   onSend: (text: string) => void;
-  onApprovalDecision: (decision: "approve" | "reject") => void;
+}
+
+// Customer-facing copy only. The policy engine's own strings (denialReason,
+// policyReason) are written for the operator deciding the case and stay in the
+// Audit tab; what reaches the customer is the code-composed decision notice in
+// server/src/agent/notify.ts, appended to this transcript when a human decides.
+function statusCopy(kind: ApprovalRow["kind"]): string {
+  return kind === "escalation"
+    ? "A human reviewer is looking at this. They will reply here with their decision."
+    : "This request needs a human review before it can go through. A reviewer will reply here with their decision.";
 }
 
 export function Chat({
@@ -19,15 +26,18 @@ export function Chat({
   messages,
   pendingApproval,
   sending,
-  resolvingApproval,
   streamingReply,
   error,
   onSend,
-  onApprovalDecision,
 }: ChatProps) {
   const [draft, setDraft] = useState("");
-  const inputDisabled = !personaLabel || sending || pendingApproval !== null;
-  const inFlight = sending || resolvingApproval;
+  // A policy_approval row means the graph is parked mid-turn on interrupt()
+  // inside the money tool, and the only defined way to continue that thread is
+  // Command({ resume }) from the resolve route, so a fresh turn cannot be
+  // posted until it is decided. An escalation's turn finished normally, so the
+  // customer can keep typing while they wait (see docs/plans/004).
+  const graphParked = pendingApproval?.kind === "policy_approval";
+  const inputDisabled = !personaLabel || sending || graphParked;
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -47,45 +57,21 @@ export function Chat({
             <p>{message.content}</p>
           </div>
         ))}
-        {inFlight && streamingReply && (
+        {sending && streamingReply && (
           <div className="chat-bubble chat-bubble-agent chat-bubble-streaming">
             <span className="chat-bubble-role">Agent</span>
             <p>{streamingReply}</p>
           </div>
         )}
-        {inFlight && !streamingReply && <div className="chat-loading">Agent is working...</div>}
+        {sending && !streamingReply && <div className="chat-loading">Agent is working...</div>}
 
         {pendingApproval && (
-          <div className="approval-banner">
-            <h3>Approval required</h3>
-            <dl>
-              <dt>Action</dt>
-              <dd>{pendingApproval.actionType}</dd>
-              <dt>Order</dt>
-              <dd>{pendingApproval.orderId ?? "N/A"}</dd>
-              <dt>Amount</dt>
-              <dd>{formatAmount(pendingApproval.amount)}</dd>
-              <dt>Policy reason</dt>
-              <dd>{pendingApproval.policyReason}</dd>
-            </dl>
-            <div className="approval-actions">
-              <button
-                type="button"
-                className="primary-button"
-                disabled={resolvingApproval}
-                onClick={() => onApprovalDecision("approve")}
-              >
-                Approve
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                disabled={resolvingApproval}
-                onClick={() => onApprovalDecision("reject")}
-              >
-                Reject
-              </button>
-            </div>
+          <div className="approval-status">
+            <h3>Waiting on a human reviewer</h3>
+            <p>{statusCopy(pendingApproval.kind)}</p>
+            {/* Console chrome, not customer copy: the decision itself is made
+                in the Audit tab, which is the only surface that resolves a row. */}
+            <p className="approval-status-hint">Operator: resolve this in the Audit tab.</p>
           </div>
         )}
       </div>
@@ -96,7 +82,7 @@ export function Chat({
         <input
           type="text"
           value={draft}
-          placeholder={pendingApproval ? "Resolve the pending approval to continue..." : "Type a message..."}
+          placeholder={graphParked ? "Waiting on the reviewer's decision..." : "Type a message..."}
           disabled={inputDisabled}
           onChange={(event) => setDraft(event.target.value)}
         />

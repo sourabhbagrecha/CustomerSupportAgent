@@ -4,6 +4,9 @@
 > This is not a to-do list and not the current-state document: everything here is built, and README.md is
 > authoritative for how the system actually works today. Some details below (the repository layout, the
 > optional Langfuse integration) were superseded during the build; the README records what shipped.
+> Section 15's in-chat approval banner (the evaluator plays the human agent inside the transcript) is
+> superseded by [004-decisions-leave-the-customer-chat.md](004-decisions-leave-the-customer-chat.md):
+> decisions are made in the audit queue only, and the chat shows a read-only status strip.
 
 A 24-hour build. The evaluator (a CTO) clones the repo and runs it themselves with their own OpenAI key. The README is the demo. Every decision below was made deliberately; do not silently deviate from it.
 

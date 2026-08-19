@@ -48,10 +48,14 @@ export function buildAgentGraph(db: Database.Database) {
 
   async function toolsNode(state: AgentState, config: unknown) {
     const result = (await rawToolNode.invoke(state, config as never)) as { messages: ToolMessage[] };
+    // escalate_to_human now always creates a pending row in the admin decision
+    // queue (see agentTools.ts), so the thread is waiting on a human decision,
+    // not terminally "escalated" with nothing left to do. appendDecisionNotice
+    // moves it to "resolved" once that decision is made (see notify.ts).
     const escalated = result.messages.some(
       (m) => typeof m.content === "string" && m.content.includes('"status":"escalated"'),
     );
-    return { ...result, resolutionStatus: escalated ? ("escalated" as const) : state.resolutionStatus };
+    return { ...result, resolutionStatus: escalated ? ("awaiting_approval" as const) : state.resolutionStatus };
   }
 
   function routeAfterAgent(state: AgentState): "tools" | typeof END {

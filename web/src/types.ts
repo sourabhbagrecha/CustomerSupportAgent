@@ -31,16 +31,22 @@ export interface FaultState {
 export type FaultsSnapshot = Partial<Record<FaultName, FaultState>>;
 
 export type ActionType = "refund" | "credit";
+export type ApprovalKind = "policy_approval" | "escalation";
 
 export interface ApprovalRow {
   id: number;
-  ledgerId: number;
+  kind: ApprovalKind;
+  ledgerId: number | null;
   threadId: string;
-  actionType: ActionType;
+  actionType: ActionType | null;
   customerId: string;
   orderId: string | null;
-  amount: number;
+  amount: number | null;
   policyReason: string;
+  denialReason: string | null;
+  category: string | null;
+  context: string | null;
+  remark: string | null;
   status: "pending" | "approved" | "rejected";
   createdAt: string;
   resolvedAt: string | null;

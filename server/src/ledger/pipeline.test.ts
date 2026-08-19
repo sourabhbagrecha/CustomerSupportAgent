@@ -221,3 +221,95 @@ describe("runMoneyAction", () => {
     expect(countPayments(db, "o7", "refund")).toBe(0);
   });
 });
+
+describe("human exception review on a denied row", () => {
+  it("granting an exception reuses the same idempotency key and yields exactly one payment", async () => {
+    seedOrder(db, "o8", 450, "placed");
+    const denied = await runMoneyAction(db, POLICY, {
+      threadId: "t8",
+      customerId: "c1",
+      actionType: "refund",
+      orderId: "o8",
+      amount: 450,
+      reason: "test",
+    });
+    expect(denied.status).toBe("denied");
+    const before = db.prepare(`SELECT * FROM actions_ledger WHERE thread_id = 't8'`).get() as {
+      id: number;
+      idempotency_key: string;
+    };
+
+    const resolved = await resolveApprovedAction(
+      db,
+      {
+        id: before.id,
+        idempotencyKey: before.idempotency_key,
+        threadId: "t8",
+        actionType: "refund",
+        customerId: "c1",
+        orderId: "o8",
+        amount: 450,
+        currency: "INR",
+        status: "denied",
+        reason: "Order status \"placed\" is not eligible for a refund.",
+        createdAt: new Date().toISOString(),
+        resolvedAt: null,
+        rawResponse: null,
+      },
+      "Customer provided proof of delivery over the phone",
+      "Exception granted by human reviewer",
+    );
+
+    expect(resolved.status).toBe("succeeded");
+    expect(countPayments(db, "o8", "refund")).toBe(1);
+    const after = db.prepare(`SELECT idempotency_key, reason FROM actions_ledger WHERE thread_id = 't8'`).get() as {
+      idempotency_key: string;
+      reason: string;
+    };
+    expect(after.idempotency_key).toBe(before.idempotency_key);
+    expect(after.reason).toBe("Exception granted by human reviewer: Customer provided proof of delivery over the phone");
+  });
+
+  it("upholding a denial writes the remark into the reason and never moves money", async () => {
+    seedOrder(db, "o9", 450, "placed");
+    const denied = await runMoneyAction(db, POLICY, {
+      threadId: "t9",
+      customerId: "c1",
+      actionType: "refund",
+      orderId: "o9",
+      amount: 450,
+      reason: "test",
+    });
+    expect(denied.status).toBe("denied");
+    const row = db.prepare(`SELECT * FROM actions_ledger WHERE thread_id = 't9'`).get() as {
+      id: number;
+      idempotency_key: string;
+    };
+
+    const result = resolveRejectedAction(
+      db,
+      {
+        id: row.id,
+        idempotencyKey: row.idempotency_key,
+        threadId: "t9",
+        actionType: "refund",
+        customerId: "c1",
+        orderId: "o9",
+        amount: 450,
+        currency: "INR",
+        status: "denied",
+        reason: "Order status \"placed\" is not eligible for a refund.",
+        createdAt: new Date().toISOString(),
+        resolvedAt: null,
+        rawResponse: null,
+      },
+      "Policy is correct here, order was never delivered",
+      "Denial upheld by human reviewer",
+    );
+
+    expect(result.status).toBe("denied");
+    expect(countPayments(db, "o9", "refund")).toBe(0);
+    const after = db.prepare(`SELECT reason FROM actions_ledger WHERE thread_id = 't9'`).get() as { reason: string };
+    expect(after.reason).toBe("Denial upheld by human reviewer: Policy is correct here, order was never delivered");
+  });
+});

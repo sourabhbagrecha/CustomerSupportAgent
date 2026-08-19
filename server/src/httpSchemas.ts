@@ -8,9 +8,18 @@ export const ChatRequestSchema = z.object({
   message: z.string().min(1),
 });
 
-export const ApprovalResolveRequestSchema = z.object({
-  decision: z.enum(["approve", "reject"]),
-});
+// A remark is how the customer learns why a request was refused (see
+// server/src/agent/notify.ts), so rejecting or upholding a denial requires
+// one; approving is free to go through without an explanation.
+export const ApprovalResolveRequestSchema = z
+  .object({
+    decision: z.enum(["approve", "reject"]),
+    remark: z.string().trim().max(500).optional(),
+  })
+  .refine((data) => data.decision !== "reject" || (data.remark && data.remark.length > 0), {
+    message: "A remark is required when rejecting or upholding a denial.",
+    path: ["remark"],
+  });
 
 export const FaultRequestSchema = z.object({
   name: FaultNameSchema,

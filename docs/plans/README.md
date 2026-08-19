@@ -6,7 +6,9 @@ before that work began, kept afterwards as a record of what was decided and why.
 | Plan | Scope | Status |
 | --- | --- | --- |
 | [001-initial-build.md](001-initial-build.md) | The original agent: money path, guardrails, retrieval, evals, observability, UI | Delivered |
-| [002-audit-view.md](002-audit-view.md) | Audit tab: cross-thread pending approvals queue and the action ledger | Delivered |
+| [002-audit-view.md](002-audit-view.md) | Audit tab: cross-thread pending approvals queue and the action ledger | Delivered, partly superseded by 003 and 004 |
+| [003-human-decision-queue.md](003-human-decision-queue.md) | Escalations become explicit admin decisions: grant an exception or uphold a denial, with a remark and a customer chat notification | Delivered |
+| [004-decisions-leave-the-customer-chat.md](004-decisions-leave-the-customer-chat.md) | The chat pane stops being a decision surface: approve/reject lives only in the audit queue, the chat shows a read-only status strip | Delivered |
 
 ## Conventions
 

@@ -79,3 +79,67 @@ describe("listPendingApprovals", () => {
     expect(listPendingApprovals(db)).toEqual([]);
   });
 });
+
+describe("escalation kind", () => {
+  it("accepts a null ledger/action/amount for an escalation with no related money action", () => {
+    const approval = insertApproval(db, {
+      kind: "escalation",
+      threadId: "t1",
+      customerId: "c1",
+      policyReason: "Customer described a legal threat.",
+      category: "legal_threat",
+      context: "Customer said they will contact their lawyer.",
+    });
+    expect(approval.kind).toBe("escalation");
+    expect(approval.ledgerId).toBeNull();
+    expect(approval.actionType).toBeNull();
+    expect(approval.amount).toBeNull();
+    expect(approval.denialReason).toBeNull();
+    expect(approval.category).toBe("legal_threat");
+    expect(listPendingApprovals(db).map((a) => a.id)).toContain(approval.id);
+  });
+
+  it("carries the underlying denial reason for an escalation tied to a denied ledger row", () => {
+    const ledger = insertLedgerRow(db, {
+      idempotencyKey: "key_escalation_1",
+      threadId: "t1",
+      actionType: "refund",
+      customerId: "c1",
+      orderId: "ord_a",
+      amount: 3200,
+      currency: "INR",
+      status: "denied",
+      reason: "Order is 90 days past delivery, outside the 30-day refund window.",
+    });
+    const approval = insertApproval(db, {
+      kind: "escalation",
+      ledgerId: ledger.id,
+      threadId: "t1",
+      actionType: "refund",
+      customerId: "c1",
+      orderId: "ord_a",
+      amount: 3200,
+      policyReason: "Order is 90 days past delivery, outside the 30-day refund window.",
+      denialReason: "Order is 90 days past delivery, outside the 30-day refund window.",
+      category: "cap_breach",
+      context: "Customer pushed back after the denial.",
+    });
+    expect(approval.ledgerId).toBe(ledger.id);
+    expect(approval.denialReason).toContain("30-day refund window");
+  });
+
+  it("persists the reviewer's remark when the escalation is resolved", () => {
+    const approval = insertApproval(db, {
+      kind: "escalation",
+      threadId: "t1",
+      customerId: "c1",
+      policyReason: "Customer described a legal threat.",
+      category: "legal_threat",
+      context: "Customer said they will contact their lawyer.",
+    });
+    const resolved = resolveApproval(db, approval.id, "rejected", "Handed off to the legal team directly.");
+    expect(resolved.status).toBe("rejected");
+    expect(resolved.remark).toBe("Handed off to the legal team directly.");
+    expect(listPendingApprovals(db)).toEqual([]);
+  });
+});

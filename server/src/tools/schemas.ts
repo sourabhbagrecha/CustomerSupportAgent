@@ -182,6 +182,7 @@ export type MoneyActionResult = z.infer<typeof MoneyActionResultSchema>;
 
 export const EscalateToHumanOutputSchema = z.object({
   escalationEventId: z.number().int(),
+  approvalId: z.number().int(),
   status: z.literal("escalated"),
   summary: z.string(),
 });

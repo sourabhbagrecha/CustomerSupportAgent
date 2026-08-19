@@ -14,12 +14,17 @@ export interface RunTurnResult {
 }
 
 function extractResult(db: Database.Database, threadId: string, state: AgentState): RunTurnResult {
-  if (getPendingApprovalForThread(db, threadId)) {
-    return { reply: null, status: "awaiting_approval", degraded: false };
-  }
   const lastAi = [...state.messages].reverse().find((m): m is AIMessage => m instanceof AIMessage);
   const content = lastAi?.content;
   const text = typeof content === "string" ? content : content ? JSON.stringify(content) : "";
+  if (getPendingApprovalForThread(db, threadId)) {
+    // A requires_approval interrupt() pauses mid-turn, so the last AI message
+    // is the empty-content tool-call message: text is "" and the pending
+    // status is the only thing to show. An escalation completes its turn normally
+    // first, so the agent's own reply text (e.g. "I've escalated this...")
+    // is real and belongs in the transcript alongside the pending-decision status.
+    return { reply: text || null, status: "awaiting_approval", degraded: false };
+  }
   return { reply: text, status: state.resolutionStatus, degraded: false };
 }
 
@@ -67,10 +72,11 @@ export async function resumeApprovalTurn(params: {
   threadId: string;
   customerId: string;
   decision: "approve" | "reject";
+  remark?: string | null;
 }): Promise<RunTurnResult> {
   try {
     const state = (await params.graph.invoke(
-      new Command({ resume: params.decision }),
+      new Command({ resume: { decision: params.decision, remark: params.remark ?? null } }),
       config(params.threadId, params.db),
     )) as AgentState;
     return extractResult(params.db, params.threadId, state);

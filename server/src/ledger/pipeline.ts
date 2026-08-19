@@ -28,8 +28,11 @@ function parseRaw(raw: string | null): Record<string, unknown> {
 }
 
 // Maps a resolved (non-pending, non-failed) ledger row to the shape the
-// model sees. Every branch of MoneyActionResultSchema is covered.
-function mapRowToResult(row: LedgerRow): MoneyActionResult {
+// model sees. Every branch of MoneyActionResultSchema is covered. Exported
+// so callers outside the money path (the approval-resolve route) can read
+// back the outcome of a row they did not themselves resolve, to compose a
+// customer notice (see server/src/agent/notify.ts).
+export function mapRowToResult(row: LedgerRow): MoneyActionResult {
   const base = {
     ledgerId: row.id,
     actionType: row.actionType,
@@ -140,10 +143,14 @@ async function reconcileAndFinalize(db: Database.Database, row: LedgerRow): Prom
   }
 }
 
-async function attemptAndHandle(db: Database.Database, row: LedgerRow): Promise<MoneyActionResult> {
+async function attemptAndHandle(
+  db: Database.Database,
+  row: LedgerRow,
+  successReasonOverride?: string,
+): Promise<MoneyActionResult> {
   try {
     const result = await callRawMockApi(db, row);
-    const updated = updateLedgerStatus(db, row.id, "succeeded", result);
+    const updated = updateLedgerStatus(db, row.id, "succeeded", result, successReasonOverride);
     return mapRowToResult(updated);
   } catch (err) {
     if (err instanceof ToolTimeoutError) {
@@ -250,14 +257,32 @@ export async function runMoneyAction(
 }
 
 // Called when a human resolves an `awaiting_approval` row via the approval
-// panel. Approve re-runs the exact same pipeline path a policy `allow` would
-// have taken (same idempotency key, so this is still exactly-once safe).
-// Reject marks the ledger row denied by human decision.
-export async function resolveApprovedAction(db: Database.Database, ledgerRow: LedgerRow): Promise<MoneyActionResult> {
-  return await attemptAndHandle(db, ledgerRow);
+// panel, OR grants an exception on a `denied` row via the escalation queue
+// (server/src/index.ts). Both re-run the exact same pipeline path a policy
+// `allow` would have taken, reusing the row's existing idempotency key, so
+// this is still exactly-once safe: the row has never actually called the raw
+// mock API before this point (deny and requires_approval both short-circuit
+// before any external call), so this is the first real attempt either way.
+// `remark` is the human reviewer's note; when present it replaces the ledger
+// row's reason so the audit trail carries the human's stated justification
+// instead of (or alongside) the original policy verdict text.
+export async function resolveApprovedAction(
+  db: Database.Database,
+  ledgerRow: LedgerRow,
+  remark?: string | null,
+  label: string = "Approved by human reviewer",
+): Promise<MoneyActionResult> {
+  const reasonOverride = remark ? `${label}: ${remark}` : undefined;
+  return await attemptAndHandle(db, ledgerRow, reasonOverride);
 }
 
-export function resolveRejectedAction(db: Database.Database, ledgerRow: LedgerRow): MoneyActionResult {
-  const updated = updateLedgerStatus(db, ledgerRow.id, "denied", undefined, "Rejected by human approver.");
+export function resolveRejectedAction(
+  db: Database.Database,
+  ledgerRow: LedgerRow,
+  remark?: string | null,
+  label: string = "Rejected by human approver",
+): MoneyActionResult {
+  const reason = remark ? `${label}: ${remark}` : `${label}.`;
+  const updated = updateLedgerStatus(db, ledgerRow.id, "denied", undefined, reason);
   return mapRowToResult(updated);
 }

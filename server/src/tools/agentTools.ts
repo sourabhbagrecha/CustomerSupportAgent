@@ -4,7 +4,8 @@ import type Database from "better-sqlite3";
 import { consumeFault } from "../faults/registry.js";
 import { emitEvent } from "../events/emitter.js";
 import { resolveApprovedAction, resolveRejectedAction, runMoneyAction } from "../ledger/pipeline.js";
-import { getLedgerById } from "../ledger/store.js";
+import { findLatestRefusalForThread, getLedgerById } from "../ledger/store.js";
+import { insertApproval } from "../ledger/approvals.js";
 import { loadPolicyDocument } from "../policy/load.js";
 import { AgentStateAnnotation, type AgentState } from "../agent/state.js";
 import {
@@ -26,6 +27,14 @@ import {
 } from "./schemas.js";
 
 type Runtime = ToolRuntime<typeof AgentStateAnnotation.State>;
+
+// The human's decision resumed into interrupt(), carrying an optional
+// reviewer remark alongside the approve/reject choice (see index.ts's
+// approval-resolve route).
+interface ApprovalDecision {
+  decision: "approve" | "reject";
+  remark: string | null;
+}
 
 function runtimeDb(runtime: Runtime): Database.Database {
   const db = runtime.config?.configurable?.db as Database.Database | undefined;
@@ -156,7 +165,7 @@ export const issueRefundTool = tool(
     }
 
     emitEvent(db, { threadId: state.threadId, type: "guardrail", payload: { stage: "interrupt", tool: "issue_refund", ledgerId: result.ledgerId } });
-    const decision = interrupt<Record<string, unknown>, "approve" | "reject">({
+    const { decision, remark } = interrupt<Record<string, unknown>, ApprovalDecision>({
       type: "approval_required",
       ledgerId: result.ledgerId,
       actionType: "refund",
@@ -166,7 +175,8 @@ export const issueRefundTool = tool(
     });
     const ledgerRow = getLedgerById(db, result.ledgerId);
     if (!ledgerRow) throw new Error(`Ledger row ${result.ledgerId} not found after approval interrupt.`);
-    const finalResult = decision === "approve" ? await resolveApprovedAction(db, ledgerRow) : resolveRejectedAction(db, ledgerRow);
+    const finalResult =
+      decision === "approve" ? await resolveApprovedAction(db, ledgerRow, remark) : resolveRejectedAction(db, ledgerRow, remark);
     emitEvent(db, { threadId: state.threadId, type: "tool_result", payload: { tool: "issue_refund", decision, result: finalResult } });
     return JSON.stringify(finalResult);
   },
@@ -200,7 +210,7 @@ export const issueCreditTool = tool(
     }
 
     emitEvent(db, { threadId: state.threadId, type: "guardrail", payload: { stage: "interrupt", tool: "issue_credit", ledgerId: result.ledgerId } });
-    const decision = interrupt<Record<string, unknown>, "approve" | "reject">({
+    const { decision, remark } = interrupt<Record<string, unknown>, ApprovalDecision>({
       type: "approval_required",
       ledgerId: result.ledgerId,
       actionType: "credit",
@@ -210,7 +220,8 @@ export const issueCreditTool = tool(
     });
     const ledgerRow = getLedgerById(db, result.ledgerId);
     if (!ledgerRow) throw new Error(`Ledger row ${result.ledgerId} not found after approval interrupt.`);
-    const finalResult = decision === "approve" ? await resolveApprovedAction(db, ledgerRow) : resolveRejectedAction(db, ledgerRow);
+    const finalResult =
+      decision === "approve" ? await resolveApprovedAction(db, ledgerRow, remark) : resolveRejectedAction(db, ledgerRow, remark);
     emitEvent(db, { threadId: state.threadId, type: "tool_result", payload: { tool: "issue_credit", decision, result: finalResult } });
     return JSON.stringify(finalResult);
   },
@@ -239,8 +250,35 @@ export const escalateToHumanTool = tool(
         relatedLedgerId: input.relatedLedgerId ?? null,
       },
     });
+
+    // Resolve which refused money action (if any) this escalation is about,
+    // so the admin queue item carries the actual denial reason rather than
+    // just the model's paraphrase of it. Trust the model's relatedLedgerId
+    // only if it really belongs to this thread; a fixed thread-scoped lookup
+    // never trusts model-supplied IDs across threads.
+    let relatedLedger =
+      input.relatedLedgerId !== undefined ? getLedgerById(db, input.relatedLedgerId) : undefined;
+    if (!relatedLedger || relatedLedger.threadId !== state.threadId) {
+      relatedLedger = findLatestRefusalForThread(db, state.threadId);
+    }
+
+    const approval = insertApproval(db, {
+      kind: "escalation",
+      ledgerId: relatedLedger?.id ?? null,
+      threadId: state.threadId,
+      actionType: relatedLedger?.actionType ?? null,
+      customerId: state.customerId,
+      orderId: relatedLedger?.orderId ?? null,
+      amount: relatedLedger?.amount ?? null,
+      policyReason: relatedLedger?.reason ?? input.reason,
+      denialReason: relatedLedger?.reason ?? null,
+      category: input.category,
+      context: input.context,
+    });
+
     const output = {
       escalationEventId: event.id!,
+      approvalId: approval.id,
       status: "escalated" as const,
       summary: `Escalated (${input.category}): ${input.reason}`,
     };

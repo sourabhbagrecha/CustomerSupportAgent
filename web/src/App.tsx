@@ -7,7 +7,6 @@ import {
   getPersonas,
   getThreadState,
   getThreads,
-  resolveApproval,
   sendChatMessage,
   setFault,
 } from "./api";
@@ -43,7 +42,6 @@ export function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [pendingApproval, setPendingApproval] = useState<ApprovalRow | null>(null);
   const [sending, setSending] = useState(false);
-  const [resolvingApproval, setResolvingApproval] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
 
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
@@ -93,7 +91,7 @@ export function App() {
   // The agent pauses at an issue_refund/issue_credit interrupt() before the
   // POST /api/chat response even returns, so a `guardrail` event with
   // payload.stage === "interrupt" is a reliable live trigger to reveal the
-  // approval banner (see also the direct fetch in handleSend below, which
+  // approval status strip (see also the direct fetch in handleSend below, which
   // covers the same case without waiting on the SSE round trip).
   useEffect(() => {
     if (!threadId) return;
@@ -161,11 +159,15 @@ export function App() {
     setMessages((prev) => [...prev, { role: "customer", content: text }]);
     try {
       const res = await sendChatMessage(threadId, selectedPersona.customerId, text);
-      if (res.status === "awaiting_approval" && res.reply === null) {
+      if (res.reply !== null) {
+        setMessages((prev) => [...prev, { role: "agent", content: res.reply as string }]);
+      }
+      // Keyed on status, not reply === null: an interrupt() pause has no
+      // reply yet, but an escalation completes its turn with a real reply
+      // AND still needs the pending-decision strip shown alongside it.
+      if (res.status === "awaiting_approval") {
         const pending = await getPendingApproval(threadId);
         setPendingApproval(pending.approval);
-      } else if (res.reply !== null) {
-        setMessages((prev) => [...prev, { role: "agent", content: res.reply as string }]);
       }
     } catch (err) {
       setChatError(messageFrom(err, "Failed to send message."));
@@ -175,33 +177,23 @@ export function App() {
     }
   }
 
-  async function handleApprovalDecision(decision: "approve" | "reject") {
-    if (!threadId || !pendingApproval) return;
-    setResolvingApproval(true);
-    setChatError(null);
-    try {
-      const res = await resolveApproval(threadId, pendingApproval.id, decision);
-      setPendingApproval(null);
-      if (res.reply !== null) {
-        setMessages((prev) => [...prev, { role: "agent", content: res.reply as string }]);
-      }
-    } catch (err) {
-      setChatError(messageFrom(err, "Failed to resolve approval."));
-    } finally {
-      setResolvingApproval(false);
-      refreshThreads();
-    }
+  // A resolved decision can append more than one message to the thread (the
+  // agent's own reply, then a separate deterministic notice carrying the
+  // reviewer's remark verbatim -- see server/src/agent/notify.ts), so this
+  // re-hydrates from the authoritative graph state rather than guessing how
+  // many bubbles to append from the audit tab's HTTP response alone.
+  async function refreshMessages(forThreadId: string) {
+    const state = await getThreadState(forThreadId);
+    setMessages(state.messages);
   }
 
   // Called after the audit tab resolves an approval that may belong to any
-  // thread. The reply only belongs in the transcript when the resolved thread
-  // is the one currently selected here.
-  function handleAuditResolved(resolvedThreadId: string, result: ChatResponse) {
+  // thread. The transcript only needs refreshing when the resolved thread is
+  // the one currently selected here.
+  function handleAuditResolved(resolvedThreadId: string, _result: ChatResponse) {
     if (resolvedThreadId === threadId) {
       setPendingApproval(null);
-      if (result.reply !== null) {
-        setMessages((prev) => [...prev, { role: "agent", content: result.reply as string }]);
-      }
+      void refreshMessages(resolvedThreadId);
     }
     refreshThreads();
   }
@@ -259,11 +251,9 @@ export function App() {
             messages={messages}
             pendingApproval={pendingApproval}
             sending={sending}
-            resolvingApproval={resolvingApproval}
             streamingReply={streamingReply}
             error={chatError}
             onSend={handleSend}
-            onApprovalDecision={handleApprovalDecision}
           />
           <TracePanel events={events} />
         </div>

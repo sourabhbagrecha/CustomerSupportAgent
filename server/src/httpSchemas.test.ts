@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LedgerQuerySchema } from "./httpSchemas.js";
+import { ApprovalResolveRequestSchema, LedgerQuerySchema } from "./httpSchemas.js";
 
 describe("LedgerQuerySchema", () => {
   it("applies defaults when the query string is empty", () => {
@@ -34,5 +34,34 @@ describe("LedgerQuerySchema", () => {
 
   it("rejects a non-numeric limit", () => {
     expect(LedgerQuerySchema.safeParse({ limit: "abc" }).success).toBe(false);
+  });
+});
+
+describe("ApprovalResolveRequestSchema", () => {
+  it("accepts an approve decision with no remark", () => {
+    expect(ApprovalResolveRequestSchema.safeParse({ decision: "approve" }).success).toBe(true);
+  });
+
+  it("accepts an approve decision with a remark", () => {
+    const parsed = ApprovalResolveRequestSchema.safeParse({ decision: "approve", remark: "Goodwill exception." });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects a reject decision with no remark", () => {
+    expect(ApprovalResolveRequestSchema.safeParse({ decision: "reject" }).success).toBe(false);
+  });
+
+  it("rejects a reject decision with a whitespace-only remark", () => {
+    expect(ApprovalResolveRequestSchema.safeParse({ decision: "reject", remark: "   " }).success).toBe(false);
+  });
+
+  it("accepts a reject decision with a real remark", () => {
+    const parsed = ApprovalResolveRequestSchema.safeParse({ decision: "reject", remark: "Order was never delivered." });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects a remark over the length bound", () => {
+    const parsed = ApprovalResolveRequestSchema.safeParse({ decision: "approve", remark: "x".repeat(501) });
+    expect(parsed.success).toBe(false);
   });
 });

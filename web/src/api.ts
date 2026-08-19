@@ -98,9 +98,10 @@ export function resolveApproval(
   threadId: string,
   approvalId: number,
   decision: "approve" | "reject",
+  remark?: string,
 ): Promise<ChatResponse> {
   return request(`/api/threads/${encodeURIComponent(threadId)}/approvals/${approvalId}/resolve`, {
     method: "POST",
-    body: JSON.stringify({ decision }),
+    body: JSON.stringify({ decision, remark }),
   });
 }

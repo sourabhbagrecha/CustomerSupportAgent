@@ -79,6 +79,18 @@ export function getLedgerById(db: Database.Database, id: number): LedgerRow | un
   return row ? fromSql(row) : undefined;
 }
 
+// Fallback lookup for escalate_to_human when the model omits relatedLedgerId:
+// the most recent terminal refusal on this thread, so the escalation queue
+// item still carries a denial reason for the admin to review.
+export function findLatestRefusalForThread(db: Database.Database, threadId: string): LedgerRow | undefined {
+  const row = db
+    .prepare(
+      `SELECT * FROM actions_ledger WHERE thread_id = ? AND status IN ('denied', 'failed_unknown') ORDER BY id DESC LIMIT 1`,
+    )
+    .get(threadId) as LedgerRowSql | undefined;
+  return row ? fromSql(row) : undefined;
+}
+
 export interface LedgerListFilter {
   status?: LedgerStatus;
   threadId?: string;

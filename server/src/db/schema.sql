@@ -183,17 +183,29 @@ CREATE INDEX idx_ledger_thread ON actions_ledger(thread_id);
 CREATE INDEX idx_ledger_customer ON actions_ledger(customer_id);
 CREATE INDEX idx_ledger_order ON actions_ledger(order_id);
 
--- One row per `requires_approval` verdict. The graph interrupt()s until a
--- human resolves this row via the approval panel.
+-- The admin decision queue. Two kinds share this table:
+--   'policy_approval': one row per `requires_approval` verdict. The graph
+--     interrupt()s until a human resolves this row via the approval panel.
+--   'escalation': one row per escalate_to_human call. No graph interrupt;
+--     the agent's turn already completed, so resolving this row acts
+--     out-of-band (see server/src/agent/notify.ts) instead of resuming a
+--     paused graph.
+-- ledger_id/action_type/amount are nullable because an escalation is not
+-- always tied to a money action (e.g. distress, legal threat).
 CREATE TABLE approvals (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  ledger_id     INTEGER NOT NULL REFERENCES actions_ledger(id),
+  kind          TEXT NOT NULL DEFAULT 'policy_approval' CHECK (kind IN ('policy_approval', 'escalation')),
+  ledger_id     INTEGER REFERENCES actions_ledger(id),
   thread_id     TEXT NOT NULL,
-  action_type   TEXT NOT NULL CHECK (action_type IN ('refund', 'credit')),
+  action_type   TEXT CHECK (action_type IN ('refund', 'credit')),
   customer_id   TEXT NOT NULL REFERENCES customers(id),
   order_id      TEXT REFERENCES orders(id),
-  amount        REAL NOT NULL,
+  amount        REAL,
   policy_reason TEXT NOT NULL,
+  denial_reason TEXT,
+  category      TEXT,
+  context       TEXT,
+  remark        TEXT,
   status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at    TEXT NOT NULL,
   resolved_at   TEXT,

@@ -8,6 +8,7 @@ import fastifyCors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import { buildAgentGraph } from "./agent/graph.js";
+import { appendDecisionNotice, buildDecisionNotice } from "./agent/notify.js";
 import { runTurn, resumeApprovalTurn } from "./agent/runTurn.js";
 import type { AgentState } from "./agent/state.js";
 import { getDb } from "./db/client.js";
@@ -19,7 +20,8 @@ import {
   listPendingApprovals,
   resolveApproval,
 } from "./ledger/approvals.js";
-import { countLedgerRows, listLedgerRows } from "./ledger/store.js";
+import { mapRowToResult, resolveApprovedAction, resolveRejectedAction } from "./ledger/pipeline.js";
+import { countLedgerRows, getLedgerById, listLedgerRows } from "./ledger/store.js";
 import {
   ApprovalResolveRequestSchema,
   ChatRequestSchema,
@@ -27,6 +29,7 @@ import {
   LedgerQuerySchema,
 } from "./httpSchemas.js";
 import { DEMO_PERSONAS } from "./personas.js";
+import type { MoneyActionResult } from "./tools/schemas.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WEB_DIST = join(__dirname, "..", "..", "dist", "web");
@@ -177,24 +180,57 @@ app.post<{ Params: { threadId: string; approvalId: string }; Body: unknown }>(
       return reply.code(409).send({ error: `Approval already ${approval.status}.` });
     }
 
+    const { decision, remark } = parsed.data;
+    const remarkText = remark && remark.length > 0 ? remark : null;
+    const threadId = request.params.threadId;
+
     try {
       // Record the human's decision on the approvals row itself before
-      // resuming the graph: this is what makes the approval banner
-      // disappear, independent of whatever the downstream money outcome
+      // acting on it: this is what makes the queue row disappear,
+      // independent of whatever the downstream money outcome
       // (succeeded/reconciled/failed_unknown) turns out to be in the ledger.
-      resolveApproval(db, approvalId, parsed.data.decision === "approve" ? "approved" : "rejected");
-      const result = await resumeApprovalTurn({
-        db,
-        graph,
-        threadId: request.params.threadId,
-        customerId: approval.customerId,
-        decision: parsed.data.decision,
+      resolveApproval(db, approvalId, decision === "approve" ? "approved" : "rejected", remarkText);
+      emitEvent(db, {
+        threadId,
+        type: "guardrail",
+        payload: { stage: "human_decision", approvalId, kind: approval.kind, decision, remark: remarkText },
       });
-      return result;
+
+      if (approval.kind === "policy_approval") {
+        // The graph is paused at an issue_refund/issue_credit interrupt();
+        // resuming it lets the agent's own turn finish (it may still need to
+        // say more to the customer), and the remark travels with the resume
+        // so it lands in the ledger row's reason (see agentTools.ts).
+        const result = await resumeApprovalTurn({ db, graph, threadId, customerId: approval.customerId, decision, remark: remarkText });
+        if (remarkText) {
+          const moneyResult = approval.ledgerId ? mapRowToResult(getLedgerById(db, approval.ledgerId)!) : null;
+          const notice = buildDecisionNotice({ approval, decision, moneyResult, remark: remarkText });
+          await appendDecisionNotice(db, graph, threadId, notice);
+        }
+        return result;
+      }
+
+      // kind === "escalation": the agent's turn already completed by the time
+      // this got reviewed, so there is no interrupt() to resume. Act on the
+      // ledger row directly (same idempotency key, first real external call
+      // either way, per pipeline.ts) and notify the customer out of band.
+      let moneyResult: MoneyActionResult | null = null;
+      if (approval.ledgerId) {
+        const ledgerRow = getLedgerById(db, approval.ledgerId);
+        if (!ledgerRow) throw new Error(`Ledger row ${approval.ledgerId} referenced by approval ${approvalId} not found.`);
+        moneyResult =
+          decision === "approve"
+            ? await resolveApprovedAction(db, ledgerRow, remarkText, "Exception granted by human reviewer")
+            : resolveRejectedAction(db, ledgerRow, remarkText, "Denial upheld by human reviewer");
+      }
+
+      const notice = buildDecisionNotice({ approval, decision, moneyResult, remark: remarkText });
+      await appendDecisionNotice(db, graph, threadId, notice);
+      return { reply: notice, status: "resolved" as const, degraded: false };
     } catch (err) {
       request.log.error(err);
       emitEvent(db, {
-        threadId: request.params.threadId,
+        threadId,
         type: "error",
         payload: { stage: "approval_resolve_route", message: err instanceof Error ? err.message : String(err) },
       });

@@ -1,6 +1,13 @@
 # 002: Audit view (cross-thread approvals queue plus action ledger)
 
-Status: planned, then delivered in the same commit as this file.
+Status: planned, then delivered in the same commit as this file. Partly superseded by
+[003-human-decision-queue.md](003-human-decision-queue.md): the "Explicitly not in scope" note below
+that `escalate_to_human` stays fire-and-forget into `events` with no table, assignee, or close is no
+longer accurate as of 003. The rest of this file (the read-only queue and ledger view, the polling
+decision, the tab-unmount decision) still describes the system as it works today, except that the
+chat banner it kept alongside the queue was removed by
+[004-decisions-leave-the-customer-chat.md](004-decisions-leave-the-customer-chat.md): the queue is
+now the only surface that resolves an approval.
 
 ## Why
 
