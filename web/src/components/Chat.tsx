@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { formatAmount } from "../format";
 import type { ApprovalRow, ChatMessage } from "../types";
 
 interface ChatProps {
@@ -63,7 +64,7 @@ export function Chat({
               <dt>Order</dt>
               <dd>{pendingApproval.orderId ?? "N/A"}</dd>
               <dt>Amount</dt>
-              <dd>Rs. {pendingApproval.amount}</dd>
+              <dd>{formatAmount(pendingApproval.amount)}</dd>
               <dt>Policy reason</dt>
               <dd>{pendingApproval.policyReason}</dd>
             </dl>

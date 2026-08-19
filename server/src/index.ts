@@ -13,8 +13,19 @@ import type { AgentState } from "./agent/state.js";
 import { getDb } from "./db/client.js";
 import { emitEvent, listEventsForThread, subscribe, subscribeStream } from "./events/emitter.js";
 import { clearAllFaults, getSnapshot, setFault } from "./faults/registry.js";
-import { getApprovalById, getPendingApprovalForThread, resolveApproval } from "./ledger/approvals.js";
-import { ApprovalResolveRequestSchema, ChatRequestSchema, FaultRequestSchema } from "./httpSchemas.js";
+import {
+  getApprovalById,
+  getPendingApprovalForThread,
+  listPendingApprovals,
+  resolveApproval,
+} from "./ledger/approvals.js";
+import { countLedgerRows, listLedgerRows } from "./ledger/store.js";
+import {
+  ApprovalResolveRequestSchema,
+  ChatRequestSchema,
+  FaultRequestSchema,
+  LedgerQuerySchema,
+} from "./httpSchemas.js";
 import { DEMO_PERSONAS } from "./personas.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -136,6 +147,21 @@ app.get<{ Params: { threadId: string } }>("/api/threads/:threadId/approvals/pend
   return { approval: approval ?? null };
 });
 
+// Cross-thread queue for the audit view. Deliberately unpaginated: the number
+// of pending approvals is bounded by the number of simultaneously interrupted
+// threads, which is bounded by how many conversations one operator has open.
+app.get("/api/approvals/pending", async () => {
+  const approvals = listPendingApprovals(db).map((approval) => {
+    const persona = DEMO_PERSONAS.find((p) => p.customerId === approval.customerId);
+    return {
+      ...approval,
+      personaName: persona?.name ?? null,
+      personaLabel: persona?.label ?? null,
+    };
+  });
+  return { approvals };
+});
+
 app.post<{ Params: { threadId: string; approvalId: string }; Body: unknown }>(
   "/api/threads/:threadId/approvals/:approvalId/resolve",
   async (request, reply) => {
@@ -176,6 +202,21 @@ app.post<{ Params: { threadId: string; approvalId: string }; Body: unknown }>(
     }
   },
 );
+
+// The full money audit trail: every refund and credit the agent ever proposed,
+// including the denied and awaiting_approval rows that never moved money. The
+// `total` alongside the page is what lets the UI say how much it is not showing.
+app.get<{ Querystring: unknown }>("/api/ledger", async (request, reply) => {
+  const parsed = LedgerQuerySchema.safeParse(request.query);
+  if (!parsed.success) return reply.code(400).send({ error: parsed.error.message });
+  const { status, threadId, limit, offset } = parsed.data;
+  return {
+    rows: listLedgerRows(db, { status, threadId, limit, offset }),
+    total: countLedgerRows(db, { status, threadId }),
+    limit,
+    offset,
+  };
+});
 
 app.get<{ Params: { threadId: string } }>("/api/events/:threadId", async (request, reply) => {
   const { threadId } = request.params;

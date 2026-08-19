@@ -11,11 +11,20 @@ import {
   sendChatMessage,
   setFault,
 } from "./api";
+import { AuditPanel } from "./components/AuditPanel";
 import { Chat } from "./components/Chat";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { PersonaPanel } from "./components/PersonaPanel";
 import { TracePanel } from "./components/TracePanel";
-import type { ApprovalRow, ChatMessage, FaultName, FaultsSnapshot, Persona, ThreadSummary } from "./types";
+import type {
+  ApprovalRow,
+  ChatMessage,
+  ChatResponse,
+  FaultName,
+  FaultsSnapshot,
+  Persona,
+  ThreadSummary,
+} from "./types";
 import { useEvents } from "./useEvents";
 
 function messageFrom(err: unknown, fallback: string): string {
@@ -23,6 +32,7 @@ function messageFrom(err: unknown, fallback: string): string {
 }
 
 export function App() {
+  const [tab, setTab] = useState<"console" | "audit">("console");
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [faults, setFaults] = useState<FaultsSnapshot>({});
   const [faultsBusy, setFaultsBusy] = useState(false);
@@ -183,41 +193,83 @@ export function App() {
     }
   }
 
+  // Called after the audit tab resolves an approval that may belong to any
+  // thread. The reply only belongs in the transcript when the resolved thread
+  // is the one currently selected here.
+  function handleAuditResolved(resolvedThreadId: string, result: ChatResponse) {
+    if (resolvedThreadId === threadId) {
+      setPendingApproval(null);
+      if (result.reply !== null) {
+        setMessages((prev) => [...prev, { role: "agent", content: result.reply as string }]);
+      }
+    }
+    refreshThreads();
+  }
+
   return (
     <div className="app-shell">
       <header className="app-header">
         <h1>Support Agent Console</h1>
+        <nav className="app-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "console"}
+            className={`app-tab${tab === "console" ? " app-tab-active" : ""}`}
+            onClick={() => setTab("console")}
+          >
+            Console
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "audit"}
+            className={`app-tab${tab === "audit" ? " app-tab-active" : ""}`}
+            onClick={() => setTab("audit")}
+          >
+            Audit
+          </button>
+        </nav>
       </header>
       {loadError && <div className="inline-error app-load-error">{loadError}</div>}
-      <div className="app-layout">
-        <HistoryPanel
-          threads={threads}
-          selectedThreadId={threadId}
-          onSelectThread={handleSelectThread}
-          loading={historyLoading}
-        />
-        <PersonaPanel
-          personas={personas}
-          selectedCustomerId={selectedPersona?.customerId ?? null}
-          onSelectPersona={handleSelectPersona}
-          faults={faults}
-          onToggleFault={handleToggleFault}
-          onClearFaults={handleClearFaults}
-          faultsBusy={faultsBusy}
-        />
-        <Chat
-          personaLabel={selectedPersona ? `${selectedPersona.name} (${selectedPersona.label})` : null}
-          messages={messages}
-          pendingApproval={pendingApproval}
-          sending={sending}
-          resolvingApproval={resolvingApproval}
-          streamingReply={streamingReply}
-          error={chatError}
-          onSend={handleSend}
-          onApprovalDecision={handleApprovalDecision}
-        />
-        <TracePanel events={events} />
-      </div>
+      {/* The console unmounts rather than hiding when the audit tab is active.
+          That is safe because the SSE route replays a thread's stored events on
+          reconnect, so the trace panel rebuilds losslessly, and messages live
+          here in App and survive regardless. Only the live typing cursor
+          resets. Do not "optimize" this into a CSS-hidden layout. */}
+      {tab === "console" ? (
+        <div className="app-layout">
+          <HistoryPanel
+            threads={threads}
+            selectedThreadId={threadId}
+            onSelectThread={handleSelectThread}
+            loading={historyLoading}
+          />
+          <PersonaPanel
+            personas={personas}
+            selectedCustomerId={selectedPersona?.customerId ?? null}
+            onSelectPersona={handleSelectPersona}
+            faults={faults}
+            onToggleFault={handleToggleFault}
+            onClearFaults={handleClearFaults}
+            faultsBusy={faultsBusy}
+          />
+          <Chat
+            personaLabel={selectedPersona ? `${selectedPersona.name} (${selectedPersona.label})` : null}
+            messages={messages}
+            pendingApproval={pendingApproval}
+            sending={sending}
+            resolvingApproval={resolvingApproval}
+            streamingReply={streamingReply}
+            error={chatError}
+            onSend={handleSend}
+            onApprovalDecision={handleApprovalDecision}
+          />
+          <TracePanel events={events} />
+        </div>
+      ) : (
+        <AuditPanel onResolved={handleAuditResolved} />
+      )}
     </div>
   );
 }

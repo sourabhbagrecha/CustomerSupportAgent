@@ -16,6 +16,9 @@ body {
 }
 
 .app-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
   padding: 12px 20px;
   border-bottom: 1px solid #d8dbe0;
   background: #ffffff;
@@ -459,4 +462,262 @@ body {
 
 .trace-entry-fault {
   border-color: #9333ea;
+}
+
+/* Header tabs */
+
+.app-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.app-tab {
+  padding: 5px 12px;
+  border: 1px solid #d8dbe0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #565f6d;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app-tab:hover {
+  border-color: #c7cbd1;
+}
+
+.app-tab-active {
+  border-color: #2563eb;
+  background: #eff4ff;
+  color: #2563eb;
+}
+
+/* Audit view */
+
+/* A second layout beside .app-layout rather than a refactor of it. The
+   minmax(0, 1fr) is load-bearing: without it the grid refuses to shrink below
+   the ledger table's intrinsic width and the wide detail content overflows the
+   page instead of the table wrapper. */
+.audit-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  min-height: 0;
+}
+
+.audit-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  color: #8a919c;
+  margin-bottom: 10px;
+}
+
+.audit-refresh {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.audit-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #565f6d;
+}
+
+.audit-filter select {
+  padding: 4px 6px;
+  border: 1px solid #c7cbd1;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.audit-count {
+  white-space: nowrap;
+}
+
+.audit-empty {
+  font-size: 13px;
+  color: #8a919c;
+  padding: 0 4px;
+}
+
+.audit-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #8a919c;
+}
+
+.audit-notice {
+  background: #eff4ff;
+  border: 1px solid #dbeafe;
+  color: #1c2128;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.audit-queue {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Same amber as .approval-banner on purpose: a pending approval should look
+   identical whether it is seen in the chat or in the cross-thread queue. */
+.audit-queue-item {
+  border: 1px solid #f0b429;
+  background: #fff8e6;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.audit-queue-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.audit-queue-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.audit-queue-amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: #92400e;
+  white-space: nowrap;
+}
+
+.audit-queue-item dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin: 0 0 8px;
+  font-size: 12px;
+}
+
+.audit-queue-item dt {
+  font-weight: 600;
+  color: #565f6d;
+}
+
+.audit-queue-item dd {
+  margin: 0;
+}
+
+.audit-queue-thread {
+  margin: 0 0 10px;
+  font-size: 10px;
+  color: #8a919c;
+  word-break: break-all;
+}
+
+/* Ledger table */
+
+.ledger-table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+}
+
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.ledger-table th {
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #8a919c;
+  padding: 6px 8px;
+  border-bottom: 1px solid #d8dbe0;
+}
+
+.ledger-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e2e4e8;
+  vertical-align: top;
+}
+
+.ledger-nowrap {
+  white-space: nowrap;
+}
+
+.ledger-reason {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: #565f6d;
+}
+
+.ledger-detail-row td {
+  border-bottom: 1px solid #e2e4e8;
+  padding-top: 0;
+}
+
+.ledger-detail-row summary {
+  font-size: 10px;
+  color: #8a919c;
+  cursor: pointer;
+  word-break: break-all;
+}
+
+.ledger-key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.ledger-status {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #eef0f3;
+  color: #565f6d;
+  white-space: nowrap;
+}
+
+.ledger-status-succeeded,
+.ledger-status-reconciled {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.ledger-status-denied,
+.ledger-status-failed,
+.ledger-status-failed_unknown {
+  background: #fde8e8;
+  color: #9b1c1c;
+}
+
+.ledger-status-pending,
+.ledger-status-awaiting_approval {
+  background: #fff8e6;
+  color: #92400e;
 }

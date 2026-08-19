@@ -3,6 +3,9 @@ import type {
   ChatResponse,
   FaultName,
   FaultsSnapshot,
+  LedgerPage,
+  LedgerStatus,
+  PendingApprovalSummary,
   Persona,
   ThreadState,
   ThreadSummary,
@@ -68,6 +71,27 @@ export function getThreads(): Promise<{ threads: ThreadSummary[] }> {
 
 export function getPendingApproval(threadId: string): Promise<{ approval: ApprovalRow | null }> {
   return request(`/api/threads/${encodeURIComponent(threadId)}/approvals/pending`);
+}
+
+// Cross-thread queue for the audit view, as opposed to the single-thread
+// getPendingApproval above.
+export function getPendingApprovals(): Promise<{ approvals: PendingApprovalSummary[] }> {
+  return request("/api/approvals/pending");
+}
+
+export function getLedger(params: {
+  status?: LedgerStatus;
+  threadId?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<LedgerPage> {
+  const query = new URLSearchParams();
+  if (params.status) query.set("status", params.status);
+  if (params.threadId) query.set("threadId", params.threadId);
+  if (params.limit !== undefined) query.set("limit", String(params.limit));
+  if (params.offset !== undefined) query.set("offset", String(params.offset));
+  const suffix = query.toString();
+  return request(suffix ? `/api/ledger?${suffix}` : "/api/ledger");
 }
 
 export function resolveApproval(

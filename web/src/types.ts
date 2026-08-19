@@ -1,6 +1,7 @@
 // Shared frontend types mirroring the backend's Zod-validated shapes
 // (server/src/httpSchemas.ts, server/src/faults/types.ts, server/src/personas.ts,
-// server/src/ledger/approvals.ts, server/src/events/types.ts). Kept as plain
+// server/src/ledger/approvals.ts, server/src/ledger/store.ts,
+// server/src/events/types.ts). Kept as plain
 // TypeScript here since the frontend only reads these shapes over fetch/SSE;
 // it does not need its own Zod validation layer for a demo app.
 
@@ -44,6 +45,48 @@ export interface ApprovalRow {
   createdAt: string;
   resolvedAt: string | null;
   resolvedBy: string | null;
+}
+
+// GET /api/approvals/pending: an ApprovalRow plus the persona lookup the server
+// does from DEMO_PERSONAS, so the queue can name a customer without a second call.
+export interface PendingApprovalSummary extends ApprovalRow {
+  personaName: string | null;
+  personaLabel: string | null;
+}
+
+// Mirrors LedgerStatusSchema in server/src/ledger/store.ts.
+export const LEDGER_STATUSES = [
+  "pending",
+  "succeeded",
+  "failed",
+  "failed_unknown",
+  "reconciled",
+  "denied",
+  "awaiting_approval",
+] as const;
+export type LedgerStatus = (typeof LEDGER_STATUSES)[number];
+
+export interface LedgerRow {
+  id: number;
+  idempotencyKey: string;
+  threadId: string;
+  actionType: ActionType;
+  customerId: string;
+  orderId: string | null;
+  amount: number;
+  currency: string;
+  status: LedgerStatus;
+  reason: string;
+  createdAt: string;
+  resolvedAt: string | null;
+  rawResponse: string | null;
+}
+
+export interface LedgerPage {
+  rows: LedgerRow[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 export type ResolutionStatus = "open" | "resolved" | "escalated" | "awaiting_approval";

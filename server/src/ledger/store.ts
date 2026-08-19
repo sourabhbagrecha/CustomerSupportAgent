@@ -1,14 +1,21 @@
 import type Database from "better-sqlite3";
+import { z } from "zod";
 import type { ActionType } from "../tools/schemas.js";
 
-export type LedgerStatus =
-  | "pending"
-  | "succeeded"
-  | "failed"
-  | "failed_unknown"
-  | "reconciled"
-  | "denied"
-  | "awaiting_approval";
+// Zod is the source of truth so the /api/ledger query-param schema can reuse
+// the same seven values instead of keeping a second copy of them. The CHECK
+// constraint in schema.sql stays as the database-level guard.
+export const LedgerStatusSchema = z.enum([
+  "pending",
+  "succeeded",
+  "failed",
+  "failed_unknown",
+  "reconciled",
+  "denied",
+  "awaiting_approval",
+]);
+
+export type LedgerStatus = z.infer<typeof LedgerStatusSchema>;
 
 export interface LedgerRow {
   id: number;
@@ -70,6 +77,53 @@ export function findLedgerByIdempotencyKey(db: Database.Database, key: string): 
 export function getLedgerById(db: Database.Database, id: number): LedgerRow | undefined {
   const row = db.prepare(`SELECT * FROM actions_ledger WHERE id = ?`).get(id) as LedgerRowSql | undefined;
   return row ? fromSql(row) : undefined;
+}
+
+export interface LedgerListFilter {
+  status?: LedgerStatus;
+  threadId?: string;
+}
+
+// Read-only, for the audit view. Ordered by id rather than created_at because
+// id is INTEGER PRIMARY KEY AUTOINCREMENT and therefore a stable total order,
+// while created_at is an ISO string that can tie at millisecond resolution and
+// give a non-deterministic page boundary.
+//
+// No idx_ledger_status exists and none is added: applying a schema change means
+// running `npm run seed`, which deletes data/app.db, and the row counts here do
+// not justify that. Revisit only if the table grows large enough to matter.
+export function listLedgerRows(
+  db: Database.Database,
+  filter: LedgerListFilter & { limit: number; offset: number },
+): LedgerRow[] {
+  const rows = db
+    .prepare(
+      `SELECT * FROM actions_ledger
+        WHERE (@status IS NULL OR status = @status)
+          AND (@threadId IS NULL OR thread_id = @threadId)
+        ORDER BY id DESC
+        LIMIT @limit OFFSET @offset`,
+    )
+    // better-sqlite3 throws on undefined named parameters, so absent filters
+    // must be normalized to null rather than left off the object.
+    .all({
+      status: filter.status ?? null,
+      threadId: filter.threadId ?? null,
+      limit: filter.limit,
+      offset: filter.offset,
+    }) as LedgerRowSql[];
+  return rows.map(fromSql);
+}
+
+export function countLedgerRows(db: Database.Database, filter: LedgerListFilter): number {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM actions_ledger
+        WHERE (@status IS NULL OR status = @status)
+          AND (@threadId IS NULL OR thread_id = @threadId)`,
+    )
+    .get({ status: filter.status ?? null, threadId: filter.threadId ?? null }) as { n: number };
+  return row.n;
 }
 
 export interface InsertLedgerInput {

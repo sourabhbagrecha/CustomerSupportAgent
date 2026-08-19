@@ -6,6 +6,7 @@ before that work began, kept afterwards as a record of what was decided and why.
 | Plan | Scope | Status |
 | --- | --- | --- |
 | [001-initial-build.md](001-initial-build.md) | The original agent: money path, guardrails, retrieval, evals, observability, UI | Delivered |
+| [002-audit-view.md](002-audit-view.md) | Audit tab: cross-thread pending approvals queue and the action ledger | Delivered |
 
 ## Conventions
 
