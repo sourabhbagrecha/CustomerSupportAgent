@@ -9,7 +9,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_001",
-    "createdAt": "2026-08-06T19:38:02.155Z"
+    "createdAt": "2026-08-08T06:03:41.863Z"
   },
   {
     "id": "pay_002a",
@@ -21,7 +21,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_002a",
-    "createdAt": "2026-08-10T19:38:02.155Z"
+    "createdAt": "2026-08-12T06:03:41.863Z"
   },
   {
     "id": "pay_002b",
@@ -33,7 +33,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_002b",
-    "createdAt": "2026-08-10T19:39:32.155Z"
+    "createdAt": "2026-08-12T06:05:11.863Z"
   },
   {
     "id": "pay_003",
@@ -45,7 +45,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_003",
-    "createdAt": "2026-08-15T19:38:02.155Z"
+    "createdAt": "2026-08-17T06:03:41.863Z"
   },
   {
     "id": "pay_004a",
@@ -57,7 +57,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_004a",
-    "createdAt": "2026-08-13T19:38:02.155Z"
+    "createdAt": "2026-08-15T06:03:41.863Z"
   },
   {
     "id": "pay_004b",
@@ -69,7 +69,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_004b",
-    "createdAt": "2026-08-12T19:38:02.155Z"
+    "createdAt": "2026-08-14T06:03:41.863Z"
   },
   {
     "id": "pay_004c",
@@ -81,7 +81,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_004c",
-    "createdAt": "2026-08-11T19:38:02.155Z"
+    "createdAt": "2026-08-13T06:03:41.863Z"
   },
   {
     "id": "pay_005",
@@ -93,7 +93,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_005",
-    "createdAt": "2026-08-14T19:38:02.155Z"
+    "createdAt": "2026-08-16T06:03:41.863Z"
   },
   {
     "id": "pay_006",
@@ -105,7 +105,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_006",
-    "createdAt": "2026-07-24T19:38:02.155Z"
+    "createdAt": "2026-07-26T06:03:41.863Z"
   },
   {
     "id": "pay_007",
@@ -117,7 +117,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_007",
-    "createdAt": "2026-08-08T19:38:02.155Z"
+    "createdAt": "2026-08-10T06:03:41.863Z"
   },
   {
     "id": "pay_008_01",
@@ -129,7 +129,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_008_01",
-    "createdAt": "2026-03-01T19:38:02.155Z"
+    "createdAt": "2026-03-03T06:03:41.863Z"
   },
   {
     "id": "pay_008_02",
@@ -141,7 +141,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_008_02",
-    "createdAt": "2026-03-21T19:38:02.155Z"
+    "createdAt": "2026-03-23T06:03:41.863Z"
   },
   {
     "id": "pay_008_03",
@@ -153,7 +153,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_008_03",
-    "createdAt": "2026-03-31T19:38:02.155Z"
+    "createdAt": "2026-04-02T06:03:41.863Z"
   },
   {
     "id": "pay_008_04",
@@ -165,7 +165,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_008_04",
-    "createdAt": "2026-04-10T19:38:02.155Z"
+    "createdAt": "2026-04-12T06:03:41.863Z"
   },
   {
     "id": "pay_008_05",
@@ -177,7 +177,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_008_05",
-    "createdAt": "2026-04-20T19:38:02.155Z"
+    "createdAt": "2026-04-22T06:03:41.863Z"
   },
   {
     "id": "pay_008_06",
@@ -189,7 +189,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_008_06",
-    "createdAt": "2026-04-30T19:38:02.155Z"
+    "createdAt": "2026-05-02T06:03:41.863Z"
   },
   {
     "id": "pay_008_07",
@@ -201,7 +201,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_008_07",
-    "createdAt": "2026-05-15T19:38:02.155Z"
+    "createdAt": "2026-05-17T06:03:41.863Z"
   },
   {
     "id": "pay_008_08",
@@ -213,7 +213,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_008_08",
-    "createdAt": "2026-05-30T19:38:02.155Z"
+    "createdAt": "2026-06-01T06:03:41.863Z"
   },
   {
     "id": "pay_008_09",
@@ -225,7 +225,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_008_09",
-    "createdAt": "2026-06-14T19:38:02.155Z"
+    "createdAt": "2026-06-16T06:03:41.863Z"
   },
   {
     "id": "pay_008_10",
@@ -237,7 +237,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_008_10",
-    "createdAt": "2026-07-04T19:38:02.155Z"
+    "createdAt": "2026-07-06T06:03:41.863Z"
   },
   {
     "id": "pay_008_11",
@@ -249,7 +249,7 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_008_11",
-    "createdAt": "2026-07-24T19:38:02.155Z"
+    "createdAt": "2026-07-26T06:03:41.863Z"
   },
   {
     "id": "pay_008_12",
@@ -261,6 +261,54 @@
     "status": "succeeded",
     "idempotencyKey": null,
     "providerReference": "prov_fixture_pay_008_12",
-    "createdAt": "2026-08-08T19:38:02.155Z"
+    "createdAt": "2026-08-10T06:03:41.863Z"
+  },
+  {
+    "id": "pay_009",
+    "orderId": "ord_009",
+    "customerId": "cust_009",
+    "amount": 375,
+    "currency": "INR",
+    "type": "charge",
+    "status": "succeeded",
+    "idempotencyKey": null,
+    "providerReference": "prov_fixture_pay_009",
+    "createdAt": "2026-08-08T06:03:41.863Z"
+  },
+  {
+    "id": "pay_009r",
+    "orderId": "ord_009",
+    "customerId": "cust_009",
+    "amount": 375,
+    "currency": "INR",
+    "type": "refund",
+    "status": "succeeded",
+    "idempotencyKey": "303eee3afb7b41df3c12855567b05d1bc32d60f7171bdfa85917d5ccb5db39d8",
+    "providerReference": "prov_fixture_pay_009r",
+    "createdAt": "2026-08-14T06:07:41.863Z"
+  },
+  {
+    "id": "pay_010",
+    "orderId": "ord_010",
+    "customerId": "cust_010",
+    "amount": 460,
+    "currency": "INR",
+    "type": "charge",
+    "status": "succeeded",
+    "idempotencyKey": null,
+    "providerReference": "prov_fixture_pay_010",
+    "createdAt": "2026-08-09T06:03:41.863Z"
+  },
+  {
+    "id": "pay_010r",
+    "orderId": "ord_010",
+    "customerId": "cust_010",
+    "amount": 460,
+    "currency": "INR",
+    "type": "refund",
+    "status": "pending",
+    "idempotencyKey": "9210724d0ecd7d380de87e878fc155b9a14c3dc437ba57ba3d136f9bb87d4562",
+    "providerReference": "prov_fixture_pay_010r",
+    "createdAt": "2026-08-12T06:08:41.863Z"
   }
 ]

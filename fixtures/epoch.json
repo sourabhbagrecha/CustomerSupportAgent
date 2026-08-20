@@ -1,0 +1,4 @@
+{
+  "generatedAt": "2026-08-20",
+  "note": "UTC date on which every file in fixtures/ was generated. Fixture dates are committed as absolute ISO strings so they stay readable and diffable, but the policy engine measures the 30-day refund window against the real current date, so absolute fixtures would age out and the money-path evals would start denying by window a few weeks after this repo was written. scripts/seedFixtures.ts therefore shifts every date-bearing field forward by (today - generatedAt) whole UTC days on the way into the database. Relative ages, and therefore refund-window arithmetic, stay exactly as generated however long after generation the repo is cloned: an order that was 21 days old on the generation date is 21 days old a year later. The shift is clamped at zero so a clock behind this epoch never moves dates backwards. Regenerating fixtures rewrites this file, so the epoch can never drift out of sync with the data."
+}

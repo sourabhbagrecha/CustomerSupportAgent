@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react";
 import type { EvalRun, EvalScenario } from "../../types";
 import { ComparisonChart } from "./ComparisonChart";
+import { PromptVersionChip } from "./PromptVersionChip";
 import { RunScorecards } from "./RunScorecards";
 import { ScenarioHeatmap } from "./ScenarioHeatmap";
 import {
@@ -217,6 +218,9 @@ function RunColumnHeader({
       <div className="evals-column-header-meta evals-column-header-host">{providerHost(run.provider.baseUrl)}</div>
       <div className="evals-column-header-meta" title={describePricing(run.pricing)}>
         {run.pricing ? formatRates(run.pricing) : "unpriced"}
+      </div>
+      <div className="evals-column-header-meta">
+        <PromptVersionChip promptSha256={run.promptSha256} />
       </div>
       {isBaseline ? (
         <span className="evals-baseline-tag">baseline</span>

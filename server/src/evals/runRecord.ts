@@ -498,6 +498,26 @@ export function promptSha256(): string {
   return sha256Bytes(readFileSync(PROMPT_PATH));
 }
 
+// Prompt snapshot archive (plan 012): a committed, content-addressed copy of
+// prompt.ts per prompt version, named by the first 12 chars of the same
+// sha256 every run record stores as promptSha256, so any hash in the archive
+// can be read and diffed later even after prompt.ts has moved on. Idempotent:
+// a snapshot that already exists is never rewritten (same hash = same bytes).
+// Paths are parameters only so the unit test can point at temp dirs.
+export const PROMPTS_DIR = join(REPO_ROOT, "evals", "prompts");
+export const PROMPT_SNAPSHOT_HASH_CHARS = 12;
+
+export function archivePromptSnapshot(promptPath: string = PROMPT_PATH, promptsDir: string = PROMPTS_DIR): string | null {
+  if (!existsSync(promptPath)) return null;
+  const bytes = readFileSync(promptPath);
+  const snapshotPath = join(promptsDir, `${sha256Bytes(bytes).slice(0, PROMPT_SNAPSHOT_HASH_CHARS)}.txt`);
+  if (!existsSync(snapshotPath)) {
+    mkdirSync(promptsDir, { recursive: true });
+    writeFileSync(snapshotPath, bytes);
+  }
+  return snapshotPath;
+}
+
 // Hashes the sorted list of fixtures/*.json: each file's bytes concatenated
 // with its own name, in filename order, so the hash changes if a fixture's
 // content OR its filename changes, and is stable across re-exports when

@@ -126,6 +126,22 @@ export function shortHash(hash: string | null): string {
   return hash ? hash.slice(0, 10) : "n/a";
 }
 
+// Prompt version identity (plan 012). The short form matches the snapshot
+// filenames under evals/prompts/ (first 12 chars of promptSha256); the hue
+// is derived from the hash so every run of the same prompt version wears the
+// same color and a prompt change is visible at a glance across the archive.
+export const PROMPT_VERSION_CHARS = 12;
+
+export function promptVersionShort(promptSha256: string): string {
+  return promptSha256.length > 0 ? promptSha256.slice(0, PROMPT_VERSION_CHARS) : "n/a";
+}
+
+export function promptVersionHue(promptSha256: string): number | null {
+  if (promptSha256.length < 6) return null;
+  const parsed = Number.parseInt(promptSha256.slice(0, 6), 16);
+  return Number.isNaN(parsed) ? null : parsed % 360;
+}
+
 // Judge calibration one-liner (task P1-6): rounded agreement percentage
 // against the hand-labeled golden set, or "not computed" when this run
 // never ran a full suite (calibration is skipped for subset runs) or

@@ -1,4 +1,5 @@
 import type { EvalRun } from "../../types";
+import { PromptVersionChip } from "./PromptVersionChip";
 import {
   computeDelta,
   describePricing,
@@ -118,6 +119,9 @@ export function RunScorecards({ rows, baselineId, onSetBaseline }: RunScorecards
               <div className="evals-scorecard-meta">
                 {providerHost(run.provider.baseUrl)}
                 {run.pricing ? `, ${formatRates(run.pricing)}` : ", unpriced"}
+              </div>
+              <div className="evals-scorecard-meta">
+                prompt <PromptVersionChip promptSha256={run.promptSha256} />
               </div>
 
               <div className="evals-scorecard-hero">{formatPercent(summary.passRate)}</div>

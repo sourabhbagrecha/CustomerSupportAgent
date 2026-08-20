@@ -6,6 +6,7 @@ import type { ScenarioRecord } from "../../../evals/types.js";
 import {
   ARTIFACTS_DIR,
   REPO_ROOT,
+  archivePromptSnapshot,
   buildRunId,
   countJudgeStates,
   fixturesSha256,
@@ -211,6 +212,18 @@ export function startEvalRun(options: StartEvalRunOptions): EvalRunHandle {
     judgeCalibration: null,
   };
   const logTail: string[] = [];
+
+  // Prompt snapshot archive (plan 012): content-addressed copy of prompt.ts
+  // for the promptSha256 this record carries, so the version is inspectable
+  // later. Never fatal: a run must not fail because a snapshot could not be
+  // written, but the failure is logged, not swallowed.
+  try {
+    archivePromptSnapshot();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    pushLogLines(logTail, `prompt snapshot could not be written: ${message}`);
+    console.error(`eval runner: prompt snapshot could not be written (${message})`);
+  }
 
   // Price snapshot for the cost column (plan 008): fetched in the background
   // while vitest runs, stamped on the record as soon as it resolves so the UI

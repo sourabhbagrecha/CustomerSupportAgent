@@ -1200,6 +1200,20 @@ body {
   color: #1e40af;
 }
 
+/* Prompt version chip (plan 012): short promptSha256 in a hue-tinted pill;
+   the tint colors come inline from the hash (PromptVersionChip.tsx), this
+   rule owns the shape and the monospace face. */
+.eval-prompt-chip {
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid #d5d9e0;
+  white-space: nowrap;
+  color: inherit;
+}
+
 .eval-source-badge-cli {
   background: #eef0f3;
   color: #565f6d;

@@ -13,6 +13,10 @@
       "text": "Refunds can be auto-approved up to ₹500 within 30 days of delivery (or the order date if the order was never delivered, for example a failed delivery or a cancellation before dispatch). Requests made after the 30 day window are denied automatically and must be escalated to a human agent for case-by-case review."
     },
     {
+      "heading": "Refund Settlement Time",
+      "text": "An approved refund is submitted to the payment provider immediately and reaches the original payment method in 5 to 7 business days; store credit is available straight away. A refund that already appears as pending in the payment record has been submitted and is in flight, so it must never be issued again: the money is already on its way and a second refund would pay the customer twice. If a pending refund is materially past that window (more than 7 calendar days old), the agent should say so plainly instead of repeating the standard timeline, give the customer the provider reference from the payment record so they can trace it with their bank, and escalate to a human rather than issuing a second refund. Re-issuing is never the answer to a slow refund."
+    },
+    {
       "heading": "Auto-Approval Caps",
       "text": "The system can automatically approve a refund of up to ₹500 INR per request without human review, provided the order is eligible and within the refund window. Any refund request above ₹500 INR, regardless of how reasonable it seems, is routed to a human for approval before any money moves."
     },

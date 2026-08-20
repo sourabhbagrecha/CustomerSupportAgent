@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import type { ActionType, Order } from "../tools/schemas.js";
+import type { ActionType, Order, Payment, PaymentType } from "../tools/schemas.js";
 import type { PolicyDocument, PolicyVerdict } from "./schemas.js";
 
 export interface PolicyCheckInput {
@@ -35,27 +35,61 @@ function loadOrder(db: Database.Database, orderId: string): Order | undefined {
   };
 }
 
-function refundableBalance(db: Database.Database, orderId: string): number {
-  const charged = db
-    .prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE order_id = ? AND type = 'charge' AND status = 'succeeded'`)
-    .get(orderId) as { total: number };
-  const refunded = db
-    .prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE order_id = ? AND type = 'refund' AND status = 'succeeded'`)
-    .get(orderId) as { total: number };
-  return charged.total - refunded.total;
+// The money that has moved (or is moving) on one order, split by direction
+// and by settlement status. Both balance functions read from this, so they
+// can never disagree about what an order still owes.
+interface OrderMoney {
+  // Charges that have actually settled.
+  charged: number;
+  // Refunds that have settled at the provider.
+  refundedSettled: number;
+  // Refunds submitted to the provider and still in flight.
+  refundedPending: number;
+  // Credits that have settled.
+  creditedSettled: number;
+  // Credits issued and still in flight.
+  creditedPending: number;
 }
 
-function creditableBalance(db: Database.Database, orderId: string): number {
-  const charged = db
-    .prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE order_id = ? AND type = 'charge' AND status = 'succeeded'`)
-    .get(orderId) as { total: number };
-  const refunded = db
-    .prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE order_id = ? AND type = 'refund' AND status = 'succeeded'`)
-    .get(orderId) as { total: number };
-  const credited = db
-    .prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE order_id = ? AND type = 'credit' AND status = 'succeeded'`)
-    .get(orderId) as { total: number };
-  return charged.total - refunded.total - credited.total;
+// The asymmetry below is deliberate and is the non-obvious part of this file.
+// Money coming IN counts only once it has settled: a 'pending' charge is
+// money we have not collected yet, so counting it would inflate the
+// refundable balance and let us pay out against a charge that may still
+// fail. Money going OUT counts as soon as it is submitted: a 'pending'
+// refund or credit is already in flight at the provider and is expected to
+// land, so it must be reserved the moment it exists. Without that reservation
+// a customer asking about an in-flight refund could have a second one
+// auto-approved on top of it (the idempotency key does not catch this: a
+// different amount, or the same amount from a new thread, derives a
+// different key). 'failed' rows are ignored on both sides: nothing was
+// collected and nothing is on its way.
+function orderMoney(db: Database.Database, orderId: string): OrderMoney {
+  const sumOf = db.prepare(
+    `SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE order_id = ? AND type = ? AND status = ?`,
+  );
+  const total = (type: PaymentType, status: Payment["status"]): number =>
+    (sumOf.get(orderId, type, status) as { total: number }).total;
+  return {
+    charged: total("charge", "succeeded"),
+    refundedSettled: total("refund", "succeeded"),
+    refundedPending: total("refund", "pending"),
+    creditedSettled: total("credit", "succeeded"),
+    creditedPending: total("credit", "pending"),
+  };
+}
+
+// What is still refundable on this order: settled charges minus every refund
+// already settled or in flight.
+function refundableBalance(money: OrderMoney): number {
+  return money.charged - money.refundedSettled - money.refundedPending;
+}
+
+// What is still creditable on this order: settled charges minus every refund
+// and credit already settled or in flight.
+function creditableBalance(money: OrderMoney): number {
+  return (
+    money.charged - money.refundedSettled - money.refundedPending - money.creditedSettled - money.creditedPending
+  );
 }
 
 function daysBetween(fromIso: string, toIso: string): number {
@@ -69,9 +103,10 @@ function daysBetween(fromIso: string, toIso: string): number {
 // model's reasoning or claimed authority, only order/payment facts and the
 // policy.json caps. Called by the ledger pipeline BEFORE any ledger write.
 // A credit tied to an order is additionally bounded by that order's
-// creditable balance (charged minus refunds and credits already issued),
-// and a credit with no order at all always requires approval, since without
-// an order there is nothing to bound it against.
+// creditable balance (settled charges minus refunds and credits already
+// issued, in flight ones included), and a credit with no order at all always
+// requires approval, since without an order there is nothing to bound it
+// against.
 export function evaluatePolicy(
   db: Database.Database,
   policy: PolicyDocument,
@@ -120,12 +155,26 @@ export function evaluatePolicy(
         };
       }
 
-      const available = refundableBalance(db, input.orderId);
+      const money = orderMoney(db, input.orderId);
+      // Clamped at zero for the same reason the credit bound below is: an
+      // order refunded past what it was charged reads as "balance 0" to the
+      // customer, not as a negative number. The comparison itself is
+      // unaffected, since a requested amount is always positive.
+      const available = Math.max(0, refundableBalance(money));
       if (input.amount > available) {
+        // When part of what is missing is a refund we have already sent to
+        // the provider, say so. Otherwise the customer is told a balance of 0
+        // on an order they can see was never refunded. The agent relays this
+        // text verbatim (hard rule 2 in agent/prompt.ts), so it stays short
+        // and safe to read out loud.
+        const inFlight =
+          money.refundedPending > 0
+            ? ` A refund of ${money.refundedPending} INR on this order is already in progress and is counted against that balance.`
+            : "";
         return {
           verdict: "deny",
           denyReason: "exceeds_refundable_amount",
-          reason: `Requested amount ${input.amount} exceeds the refundable balance of ${available} on this order.`,
+          reason: `Requested amount ${input.amount} exceeds the refundable balance of ${available} on this order.${inFlight}`,
         };
       }
     }
@@ -133,11 +182,11 @@ export function evaluatePolicy(
     if (input.actionType === "credit") {
       // Clamped at zero so an order already over-credited before this bound
       // existed reads as "balance 0", not a negative number, in the reason.
-      const available = Math.max(0, creditableBalance(db, input.orderId));
+      const available = Math.max(0, creditableBalance(orderMoney(db, input.orderId)));
       if (input.amount > available) {
         return {
           verdict: "requires_approval",
-          reason: `Requested credit ${input.amount} exceeds the creditable balance of ${available} on this order (charged minus refunds and credits already issued) and requires human approval.`,
+          reason: `Requested credit ${input.amount} exceeds the creditable balance of ${available} on this order (charged minus refunds and credits already issued or in progress) and requires human approval.`,
         };
       }
     }

@@ -1,5 +1,6 @@
 import { formatTime } from "../../format";
 import type { EvalRun } from "../../types";
+import { PromptVersionChip } from "./PromptVersionChip";
 import {
   calibrationTitle,
   describeCalibration,
@@ -67,6 +68,7 @@ export function RunsTable({ runs, loading, error, selectedIds, onToggleSelect, o
                 <th>Compare</th>
                 <th>Label</th>
                 <th>Model (provider, judge)</th>
+                <th>Prompt</th>
                 <th>Source</th>
                 <th>Status</th>
                 <th>Date</th>
@@ -114,6 +116,9 @@ export function RunsTable({ runs, loading, error, selectedIds, onToggleSelect, o
                       <div className="eval-run-submeta" title={calibrationTitle(run.judgeCalibration)}>
                         {describeCalibration(run.judgeCalibration)}
                       </div>
+                    </td>
+                    <td className="ledger-nowrap">
+                      <PromptVersionChip promptSha256={run.promptSha256} />
                     </td>
                     <td>
                       <span className={`eval-source-badge eval-source-badge-${run.source}`}>{run.source}</span>

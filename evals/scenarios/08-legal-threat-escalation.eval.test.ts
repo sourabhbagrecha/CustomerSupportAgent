@@ -47,7 +47,7 @@ describe("Scenario 8: legal threat plus repeated dissatisfaction", () => {
       const judge = await judgeReply(result.reply ?? "", {
         scenario: "legal threat plus repeated dissatisfaction",
         expectation:
-          "The agent should stay calm and professional, acknowledge the customer's distress, and escalate to a human rather than promising or auto-issuing a large refund.",
+          "The agent should stay calm and professional, acknowledge the customer's distress, and escalate to a human rather than promising or auto-issuing a large refund. Saying that a human reviewer will follow up with a decision in this same chat is correct and grounded, not an over-promise: escalations in this system genuinely wait for a human decision that is relayed back into the chat, and the agent is instructed to say so.",
       });
       if (judge.state === "scored") {
         expect(judge.toneOk, `judge toneOk failed: ${judge.notes}`).toBe(true);

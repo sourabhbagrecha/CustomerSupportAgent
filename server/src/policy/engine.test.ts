@@ -34,16 +34,25 @@ function seedOrder(
   return order;
 }
 
-// Inserts an additional succeeded payment (refund or credit) on an order
-// seeded by seedOrder above. The payments table has a BEFORE INSERT trigger
+// Inserts an additional payment (charge, refund or credit) on an order seeded
+// by seedOrder above. The payments table has a BEFORE INSERT trigger
 // requiring payments.customer_id to own payments.order_id, so this always
-// uses customer 'c1', matching the order seedOrder creates.
-function seedPayment(db: Database.Database, paymentId: string, orderId: string, type: "refund" | "credit", amount: number) {
+// uses customer 'c1', matching the order seedOrder creates. `status` defaults
+// to 'succeeded'; pass 'pending' for money already submitted to the provider
+// and still in flight, or 'failed' for money that never moved.
+function seedPayment(
+  db: Database.Database,
+  paymentId: string,
+  orderId: string,
+  type: "charge" | "refund" | "credit",
+  amount: number,
+  status: "succeeded" | "pending" | "failed" = "succeeded",
+) {
   const now = new Date().toISOString();
   db.prepare(
     `INSERT INTO payments (id, order_id, customer_id, amount, currency, type, status, idempotency_key, provider_reference, created_at)
-     VALUES (@paymentId, @orderId, 'c1', @amount, 'INR', @type, 'succeeded', NULL, NULL, @now)`,
-  ).run({ paymentId, orderId, amount, type, now });
+     VALUES (@paymentId, @orderId, 'c1', @amount, 'INR', @type, @status, NULL, NULL, @now)`,
+  ).run({ paymentId, orderId, amount, type, status, now });
 }
 
 let db: Database.Database;
@@ -199,5 +208,110 @@ describe("evaluatePolicy", () => {
     const verdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "refund", orderId: "o1", amount: 5000 });
     // No `reason` field influences the outcome at all; only amount vs. cap.
     expect(verdict.verdict).toBe("requires_approval");
+  });
+});
+
+// An in-flight (pending) refund or credit is money already committed: it has
+// been submitted to the provider and is expected to land, so both balance
+// functions must reserve it. A pending CHARGE is the opposite case, money we
+// have not collected, so it must never raise what we are willing to pay out.
+describe("evaluatePolicy with in-flight (pending) payments", () => {
+  it("reserves a pending refund against the refundable balance, leaving only the remainder refundable", () => {
+    seedOrder(db, { amount: 500 });
+    seedPayment(db, "pay_refund_pending1", "o1", "refund", 200, "pending");
+
+    const remainder = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "refund", orderId: "o1", amount: 300 });
+    expect(remainder.verdict).toBe("allow");
+
+    // Without the reservation this second full refund would be auto-approved
+    // on top of the 200 already moving, paying out 700 on a 500 charge.
+    const full = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "refund", orderId: "o1", amount: 500 });
+    expect(full.verdict).toBe("deny");
+    if (full.verdict === "deny") expect(full.denyReason).toBe("exceeds_refundable_amount");
+  });
+
+  it("denies any further refund once a pending refund covers the full charge, and names the in-flight refund", () => {
+    seedOrder(db, { amount: 450 });
+    seedPayment(db, "pay_refund_pending2", "o1", "refund", 450, "pending");
+
+    const verdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "refund", orderId: "o1", amount: 100 });
+    expect(verdict.verdict).toBe("deny");
+    if (verdict.verdict === "deny") {
+      expect(verdict.denyReason).toBe("exceeds_refundable_amount");
+      expect(verdict.reason).toContain("refundable balance of 0");
+      // The agent relays this text, so a zero balance on an order with no
+      // settled refund has to explain itself.
+      expect(verdict.reason).toContain("450 INR on this order is already in progress");
+    }
+  });
+
+  it("omits the in-flight sentence when the balance is exhausted by settled refunds only", () => {
+    seedOrder(db, { amount: 450 });
+    seedPayment(db, "pay_refund_settled1", "o1", "refund", 450);
+
+    const verdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "refund", orderId: "o1", amount: 100 });
+    expect(verdict.verdict).toBe("deny");
+    if (verdict.verdict === "deny") {
+      expect(verdict.reason).toContain("refundable balance of 0");
+      expect(verdict.reason).not.toContain("in progress");
+    }
+  });
+
+  it("reserves a pending credit against the creditable balance, pushing an otherwise allowable credit to approval", () => {
+    seedOrder(db, { amount: 500 });
+    seedPayment(db, "pay_credit_pending1", "o1", "credit", 400, "pending");
+
+    const over = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "credit", orderId: "o1", amount: 200 });
+    expect(over.verdict).toBe("requires_approval");
+    if (over.verdict === "requires_approval") expect(over.reason).toContain("creditable balance of 100");
+
+    const within = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "credit", orderId: "o1", amount: 100 });
+    expect(within.verdict).toBe("allow");
+  });
+
+  it("reserves a pending refund against the creditable balance too", () => {
+    seedOrder(db, { amount: 500 });
+    seedPayment(db, "pay_refund_pending3", "o1", "refund", 500, "pending");
+
+    const verdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "credit", orderId: "o1", amount: 200 });
+    expect(verdict.verdict).toBe("requires_approval");
+    if (verdict.verdict === "requires_approval") expect(verdict.reason).toContain("creditable balance of 0");
+  });
+
+  it("ignores a failed refund in both balances", () => {
+    seedOrder(db, { amount: 300 });
+    seedPayment(db, "pay_refund_failed1", "o1", "refund", 300, "failed");
+
+    const refund = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "refund", orderId: "o1", amount: 300 });
+    expect(refund.verdict).toBe("allow");
+
+    const credit = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "credit", orderId: "o1", amount: 300 });
+    expect(credit.verdict).toBe("allow");
+  });
+
+  it("ignores a failed credit in the creditable balance", () => {
+    seedOrder(db, { amount: 300 });
+    seedPayment(db, "pay_credit_failed1", "o1", "credit", 300, "failed");
+
+    const verdict = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "credit", orderId: "o1", amount: 300 });
+    expect(verdict.verdict).toBe("allow");
+  });
+
+  it("does not let a pending charge inflate the refundable balance", () => {
+    // 300 collected, 200 still being collected. Only the 300 is ours to
+    // refund; treating the pending charge as settled would let us pay out
+    // against a charge that may still fail.
+    seedOrder(db, { amount: 300 });
+    seedPayment(db, "pay_charge_pending1", "o1", "charge", 200, "pending");
+
+    const settledOnly = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "refund", orderId: "o1", amount: 300 });
+    expect(settledOnly.verdict).toBe("allow");
+
+    const overSettled = evaluatePolicy(db, POLICY, { customerId: "c1", actionType: "refund", orderId: "o1", amount: 301 });
+    expect(overSettled.verdict).toBe("deny");
+    if (overSettled.verdict === "deny") {
+      expect(overSettled.denyReason).toBe("exceeds_refundable_amount");
+      expect(overSettled.reason).toContain("refundable balance of 300");
+    }
   });
 });

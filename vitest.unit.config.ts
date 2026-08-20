@@ -7,8 +7,10 @@ export default defineConfig({
   test: {
     // web/ is included for its pure presentation math only (evalMath: pareto
     // frontier, disagreement detection). No component or DOM tests live here;
-    // the environment stays "node" deliberately.
-    include: ["server/src/**/*.test.ts", "web/src/**/*.test.ts"],
+    // the environment stays "node" deliberately. scripts/ is included for the
+    // fixture date-shift arithmetic (scripts/seedFixtures.test.ts), which is
+    // deterministic and model-free like everything else in this suite.
+    include: ["server/src/**/*.test.ts", "web/src/**/*.test.ts", "scripts/**/*.test.ts"],
     environment: "node",
   },
 });

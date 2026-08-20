@@ -6,7 +6,7 @@
     "amount": 450,
     "currency": "INR",
     "status": "failed_delivery",
-    "orderDate": "2026-08-06T19:38:02.155Z",
+    "orderDate": "2026-08-08T06:03:41.863Z",
     "deliveryDate": null
   },
   {
@@ -16,8 +16,8 @@
     "amount": 350,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-08-10T19:38:02.155Z",
-    "deliveryDate": "2026-08-13T19:38:02.155Z"
+    "orderDate": "2026-08-12T06:03:41.863Z",
+    "deliveryDate": "2026-08-15T06:03:41.863Z"
   },
   {
     "id": "ord_003",
@@ -26,7 +26,7 @@
     "amount": 480,
     "currency": "INR",
     "status": "cancelled",
-    "orderDate": "2026-08-15T19:38:02.155Z",
+    "orderDate": "2026-08-17T06:03:41.863Z",
     "deliveryDate": null
   },
   {
@@ -36,8 +36,8 @@
     "amount": 300,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-08-13T19:38:02.155Z",
-    "deliveryDate": "2026-08-15T19:38:02.155Z"
+    "orderDate": "2026-08-15T06:03:41.863Z",
+    "deliveryDate": "2026-08-17T06:03:41.863Z"
   },
   {
     "id": "ord_004b",
@@ -46,8 +46,8 @@
     "amount": 250,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-08-12T19:38:02.155Z",
-    "deliveryDate": "2026-08-14T19:38:02.155Z"
+    "orderDate": "2026-08-14T06:03:41.863Z",
+    "deliveryDate": "2026-08-16T06:03:41.863Z"
   },
   {
     "id": "ord_004c",
@@ -56,8 +56,8 @@
     "amount": 180,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-08-11T19:38:02.155Z",
-    "deliveryDate": "2026-08-13T19:38:02.155Z"
+    "orderDate": "2026-08-13T06:03:41.863Z",
+    "deliveryDate": "2026-08-15T06:03:41.863Z"
   },
   {
     "id": "ord_005",
@@ -66,8 +66,8 @@
     "amount": 1500,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-08-14T19:38:02.155Z",
-    "deliveryDate": "2026-08-16T19:38:02.155Z"
+    "orderDate": "2026-08-16T06:03:41.863Z",
+    "deliveryDate": "2026-08-18T06:03:41.863Z"
   },
   {
     "id": "ord_006",
@@ -76,8 +76,8 @@
     "amount": 2200,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-07-24T19:38:02.155Z",
-    "deliveryDate": "2026-07-29T19:38:02.155Z"
+    "orderDate": "2026-07-26T06:03:41.863Z",
+    "deliveryDate": "2026-07-31T06:03:41.863Z"
   },
   {
     "id": "ord_007",
@@ -86,8 +86,8 @@
     "amount": 15000,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-08-08T19:38:02.155Z",
-    "deliveryDate": "2026-08-12T19:38:02.155Z"
+    "orderDate": "2026-08-10T06:03:41.863Z",
+    "deliveryDate": "2026-08-14T06:03:41.863Z"
   },
   {
     "id": "ord_008_01",
@@ -96,8 +96,8 @@
     "amount": 650,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-03-01T19:38:02.155Z",
-    "deliveryDate": "2026-03-05T19:38:02.155Z"
+    "orderDate": "2026-03-03T06:03:41.863Z",
+    "deliveryDate": "2026-03-07T06:03:41.863Z"
   },
   {
     "id": "ord_008_02",
@@ -106,8 +106,8 @@
     "amount": 220,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-03-21T19:38:02.155Z",
-    "deliveryDate": "2026-03-24T19:38:02.155Z"
+    "orderDate": "2026-03-23T06:03:41.863Z",
+    "deliveryDate": "2026-03-26T06:03:41.863Z"
   },
   {
     "id": "ord_008_03",
@@ -116,8 +116,8 @@
     "amount": 1800,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-03-31T19:38:02.155Z",
-    "deliveryDate": "2026-04-04T19:38:02.155Z"
+    "orderDate": "2026-04-02T06:03:41.863Z",
+    "deliveryDate": "2026-04-06T06:03:41.863Z"
   },
   {
     "id": "ord_008_04",
@@ -126,7 +126,7 @@
     "amount": 480,
     "currency": "INR",
     "status": "failed_delivery",
-    "orderDate": "2026-04-10T19:38:02.155Z",
+    "orderDate": "2026-04-12T06:03:41.863Z",
     "deliveryDate": null
   },
   {
@@ -136,8 +136,8 @@
     "amount": 900,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-04-20T19:38:02.155Z",
-    "deliveryDate": "2026-04-25T19:38:02.155Z"
+    "orderDate": "2026-04-22T06:03:41.863Z",
+    "deliveryDate": "2026-04-27T06:03:41.863Z"
   },
   {
     "id": "ord_008_06",
@@ -146,7 +146,7 @@
     "amount": 350,
     "currency": "INR",
     "status": "cancelled",
-    "orderDate": "2026-04-30T19:38:02.155Z",
+    "orderDate": "2026-05-02T06:03:41.863Z",
     "deliveryDate": null
   },
   {
@@ -156,8 +156,8 @@
     "amount": 3200,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-05-15T19:38:02.155Z",
-    "deliveryDate": "2026-05-20T19:38:02.155Z"
+    "orderDate": "2026-05-17T06:03:41.863Z",
+    "deliveryDate": "2026-05-22T06:03:41.863Z"
   },
   {
     "id": "ord_008_08",
@@ -166,8 +166,8 @@
     "amount": 750,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-05-30T19:38:02.155Z",
-    "deliveryDate": "2026-06-03T19:38:02.155Z"
+    "orderDate": "2026-06-01T06:03:41.863Z",
+    "deliveryDate": "2026-06-05T06:03:41.863Z"
   },
   {
     "id": "ord_008_09",
@@ -176,8 +176,8 @@
     "amount": 150,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-06-14T19:38:02.155Z",
-    "deliveryDate": "2026-06-18T19:38:02.155Z"
+    "orderDate": "2026-06-16T06:03:41.863Z",
+    "deliveryDate": "2026-06-20T06:03:41.863Z"
   },
   {
     "id": "ord_008_10",
@@ -186,8 +186,8 @@
     "amount": 300,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-07-04T19:38:02.155Z",
-    "deliveryDate": "2026-07-07T19:38:02.155Z"
+    "orderDate": "2026-07-06T06:03:41.863Z",
+    "deliveryDate": "2026-07-09T06:03:41.863Z"
   },
   {
     "id": "ord_008_11",
@@ -196,7 +196,7 @@
     "amount": 420,
     "currency": "INR",
     "status": "failed_delivery",
-    "orderDate": "2026-07-24T19:38:02.155Z",
+    "orderDate": "2026-07-26T06:03:41.863Z",
     "deliveryDate": null
   },
   {
@@ -206,7 +206,27 @@
     "amount": 550,
     "currency": "INR",
     "status": "delivered",
-    "orderDate": "2026-08-08T19:38:02.155Z",
-    "deliveryDate": "2026-08-11T19:38:02.155Z"
+    "orderDate": "2026-08-10T06:03:41.863Z",
+    "deliveryDate": "2026-08-13T06:03:41.863Z"
+  },
+  {
+    "id": "ord_009",
+    "customerId": "cust_009",
+    "itemName": "Ceramic Mug Set",
+    "amount": 375,
+    "currency": "INR",
+    "status": "delivered",
+    "orderDate": "2026-08-08T06:03:41.863Z",
+    "deliveryDate": "2026-08-11T06:03:41.863Z"
+  },
+  {
+    "id": "ord_010",
+    "customerId": "cust_010",
+    "itemName": "Steam Iron",
+    "amount": 460,
+    "currency": "INR",
+    "status": "failed_delivery",
+    "orderDate": "2026-08-09T06:03:41.863Z",
+    "deliveryDate": null
   }
 ]

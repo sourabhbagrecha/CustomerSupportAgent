@@ -74,6 +74,9 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 interface PlacedLabel {
+  // runId, not text, is the identity: several runs can share a label (the
+  // default label is just the model id), and React keys must stay unique.
+  runId: string;
   text: string;
   x: number;
   y: number;
@@ -112,7 +115,7 @@ function placeLabels(points: PlottedRun[], plotRight: number, plotTop: number, p
       y = clamp(point.cy + 4 + (attempt % 2 === 1 ? -step : step), plotTop + LABEL_HEIGHT, plotBottom);
     }
     boxes.push({ left, right: left + width, top: y - LABEL_HEIGHT, bottom: y });
-    placed.push({ text: point.run.label, x, y, anchor });
+    placed.push({ runId: point.run.runId, text: point.run.label, x, y, anchor });
   }
   return placed;
 }
@@ -317,7 +320,7 @@ export function ComparisonChart({ rows, baselineId, metric, onMetricChange }: Co
 
           {labels.map((label) => (
             <text
-              key={label.text}
+              key={label.runId}
               x={label.x}
               y={label.y}
               textAnchor={label.anchor}

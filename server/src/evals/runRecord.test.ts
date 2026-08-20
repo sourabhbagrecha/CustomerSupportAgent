@@ -1,7 +1,12 @@
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ScenarioRecord } from "../../../evals/types.js";
 import {
   EvalRunSchema,
+  PROMPT_SNAPSHOT_HASH_CHARS,
+  archivePromptSnapshot,
   buildLegacyMetadata,
   buildMarkdown,
   buildRunId,
@@ -452,5 +457,38 @@ describe("listScenarioFiles", () => {
     expect(files.length).toBeGreaterThanOrEqual(19);
     expect(files[0]).toEqual({ number: 1, name: "failed-delivery-refund", file: "01-failed-delivery-refund.eval.test.ts" });
     expect(files.find((f) => f.number === 14)?.name).toBe("all-models-down-degraded");
+  });
+});
+
+describe("archivePromptSnapshot (plan 012)", () => {
+  it("writes a content-addressed snapshot once and is idempotent", () => {
+    const dir = mkdtempSync(join(tmpdir(), "prompt-snap-"));
+    const promptPath = join(dir, "prompt.ts");
+    const promptsDir = join(dir, "prompts");
+    writeFileSync(promptPath, "export const SYSTEM_PROMPT = `v1`;");
+
+    const first = archivePromptSnapshot(promptPath, promptsDir);
+    expect(first).not.toBeNull();
+    expect(readFileSync(first!, "utf-8")).toContain("v1");
+    const hashPart = first!.split("/").pop()!.replace(".txt", "");
+    expect(hashPart).toHaveLength(PROMPT_SNAPSHOT_HASH_CHARS);
+
+    const mtime = statSync(first!).mtimeMs;
+    const second = archivePromptSnapshot(promptPath, promptsDir);
+    expect(second).toBe(first);
+    expect(statSync(first!).mtimeMs).toBe(mtime);
+
+    writeFileSync(promptPath, "export const SYSTEM_PROMPT = `v2`;");
+    const third = archivePromptSnapshot(promptPath, promptsDir);
+    expect(third).not.toBe(first);
+    expect(readdirSync(promptsDir)).toHaveLength(2);
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("returns null when the prompt file does not exist", () => {
+    const dir = mkdtempSync(join(tmpdir(), "prompt-snap-"));
+    expect(archivePromptSnapshot(join(dir, "missing.ts"), join(dir, "prompts"))).toBeNull();
+    rmSync(dir, { recursive: true, force: true });
   });
 });
