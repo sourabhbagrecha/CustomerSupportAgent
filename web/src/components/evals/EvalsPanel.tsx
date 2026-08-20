@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, deleteEvalRun, getEvalConfig, getEvalRuns } from "../../api";
 import type { EvalConfig, EvalRun } from "../../types";
+import { hideRetiredScenarios } from "./evalMath";
 import { RunComparison } from "./RunComparison";
 import { RunLauncher } from "./RunLauncher";
 import { RunsTable } from "./RunsTable";
@@ -71,7 +72,21 @@ export function EvalsPanel() {
     // Runs once on mount; loadConfig/refreshRuns are stable (useCallback, []).
   }, []);
 
-  const selectedRuns = runs.filter((r) => selectedIds.has(r.runId));
+  // Every view below reads the archive through this projection, so a scenario
+  // retired from evals/scenarios/ since a run was archived disappears from the
+  // table, the scorecards, the chart, and the grid together instead of
+  // lingering as a row the current suite can never produce again. config is
+  // null while it loads or after it failed, which leaves the runs untouched.
+  const liveScenarioNumbers = useMemo(
+    () => (config ? new Set(config.scenarios.map((s) => s.number)) : null),
+    [config],
+  );
+  const visibleRuns = useMemo(
+    () => runs.map((run) => hideRetiredScenarios(run, liveScenarioNumbers)),
+    [runs, liveScenarioNumbers],
+  );
+
+  const selectedRuns = visibleRuns.filter((r) => selectedIds.has(r.runId));
 
   // Baseline defaults to the newest selected run and follows the selection:
   // if the current baseline is deselected or deleted, fall back rather than
@@ -118,7 +133,7 @@ export function EvalsPanel() {
         onRunSettled={() => void refreshRuns()}
       />
       <RunsTable
-        runs={runs}
+        runs={visibleRuns}
         loading={runsLoading}
         error={runsError}
         selectedIds={selectedIds}

@@ -67,7 +67,7 @@ Full list in [docs/assumptions.md](docs/assumptions.md).
 
 ## Evals
 
-22 scenarios (`evals/scenarios/`) run against a real model, judged by a pinned judge model at temperature 0, plus 130 deterministic unit tests. The committed gate is [`evals/RESULTS.md`](evals/RESULTS.md), currently 21 of 22, with scenario 5 as the one documented failure. Every run also archives a self-describing record to `evals/runs/` (models, base URLs, git commit, prompt hash, per-scenario status, tokens, latency, cost), and the Evals tab compares any set of them as scorecards, a cost-versus-quality Pareto chart, and a scenario grid. Method, judge calibration, cost derivation, and the external black-box review's 12 findings: [docs/evaluation.md](docs/evaluation.md).
+23 scenarios (`evals/scenarios/`) run against a real model, judged by a pinned judge model at temperature 0, plus 202 deterministic unit tests. The committed gate is [`evals/RESULTS.md`](evals/RESULTS.md), currently 21 of 22, with scenario 10 (planted-instruction-injection) as the one failure; that gate predates scenarios 23 and 24 landing and scenario 13 being retired, so the next `npm run eval` restates it over the 23 that exist now. Every run also archives a self-describing record to `evals/runs/` (models, base URLs, git commit, prompt hash, per-scenario status, tokens, latency, cost), and the Evals tab compares any set of them as scorecards, a cost-versus-quality Pareto chart, and a scenario grid. Method, judge calibration, cost derivation, and the external black-box review's 12 findings: [docs/evaluation.md](docs/evaluation.md).
 
 ## Known failure modes
 

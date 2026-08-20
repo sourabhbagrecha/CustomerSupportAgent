@@ -184,11 +184,11 @@ describe("Scenario 23: follow-up eligibility question on an already fully refund
       // ---------------------------------------------------------------
       // Hard rule 8: the opening word of the verdict.
       // ---------------------------------------------------------------
-      const firstWord = openingWord(result.reply ?? "");
+      const bareVerdict = bareVerdictOpening(result.reply ?? "");
       expect(
-        ["yes", "no"],
-        `reply opened with the bare verdict word "${firstWord}", which hard rule 8 forbids: ${result.reply}`,
-      ).not.toContain(firstWord.toLowerCase());
+        bareVerdict,
+        `reply opened with the bare verdict word "${bareVerdict}", which hard rule 8 forbids: ${result.reply}`,
+      ).toBeNull();
 
       const events = listEventsForThread(db, threadId);
       const judge = await judgeReply(result.reply ?? "", {
@@ -228,11 +228,26 @@ function utcCalendarDaysAgo(iso: string, nowMs: number): number {
   return Math.round((nowUtc - thenUtc) / (24 * 60 * 60 * 1000));
 }
 
-// The first word of a reply, for the hard rule 8 bare-verdict check. Leading
-// whitespace and markdown emphasis or blockquote characters are stripped
-// first so "**No**, that order..." is caught as well as "No, that order...".
-// The word itself is everything up to the first non-letter, which keeps
-// "Nothing" and "Yesterday" from being misread as a bare verdict.
-function openingWord(reply: string): string {
-  return reply.replace(/^[\s*_#>~-]+/, "").split(/[^A-Za-z']/, 1)[0] ?? "";
+// The bare verdict word a reply opens with, or null if it does not open with
+// one. Returns the word itself rather than a boolean so a failure message can
+// quote it.
+//
+// Leading whitespace and markdown emphasis or blockquote characters are
+// stripped first, so "**No**, that order..." and "> No. That order..." are
+// caught the same way the live failure's plain "No, that order is outside the
+// refund window." is.
+//
+// "Bare" is the operative word, and is why this is not a flat first-word
+// equality check. The word only counts when it stands alone as the verdict,
+// that is when it is followed by punctuation or by nothing at all. "No refund
+// is possible on this order, it has already been fully refunded" opens with
+// the same three letters used as a determiner inside a sentence that names
+// the real reason, which is precisely the behavior this scenario is asking
+// for; failing that reply would be testing the opposite of the intent. The
+// dash/ellipsis codepoints are written as escapes because CLAUDE.md forbids a
+// literal em dash anywhere in the repository.
+function bareVerdictOpening(reply: string): string | null {
+  const stripped = reply.replace(/^[\s*_#>~-]+/, "");
+  const match = /^(yes|no)[*_~]*\s*(?:$|[,.;:!?\u2026\u2013\u2014-])/i.exec(stripped);
+  return match?.[1] ?? null;
 }

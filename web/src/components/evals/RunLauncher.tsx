@@ -32,7 +32,6 @@ export function RunLauncher({ config, configError, open, onToggleOpen, onRunSett
   const [baseUrlChoice, setBaseUrlChoice] = useState(CUSTOM_BASE_URL);
   const [customBaseUrl, setCustomBaseUrl] = useState("");
   const [primaryModel, setPrimaryModel] = useState("");
-  const [fallbackModel, setFallbackModel] = useState("");
   const [apiKeyEnv, setApiKeyEnv] = useState("");
 
   const [subsetOpen, setSubsetOpen] = useState(false);
@@ -173,7 +172,6 @@ export function RunLauncher({ config, configError, open, onToggleOpen, onRunSett
       label: label.trim() || undefined,
       baseUrl: effectiveBaseUrl,
       primaryModel: primaryModel.trim(),
-      fallbackModel: fallbackModel.trim() || undefined,
       apiKeyEnv,
       judgeModel: judgeModelOverride.trim() || undefined,
       judgeBaseUrl: judgeBaseUrlOverride.trim() || undefined,
@@ -261,18 +259,7 @@ export function RunLauncher({ config, configError, open, onToggleOpen, onRunSett
                   onChange={(e) => setPrimaryModel(e.target.value)}
                   disabled={!!current}
                 />
-              </label>
-
-              <label className="evals-field">
-                Fallback model
-                <input
-                  type="text"
-                  value={fallbackModel}
-                  onChange={(e) => setFallbackModel(e.target.value)}
-                  placeholder={primaryModel || "same as primary"}
-                  disabled={!!current}
-                />
-                <span className="evals-field-hint">defaults to the primary model</span>
+                <span className="evals-field-hint">also used as the failover model for this run</span>
               </label>
 
               <label className="evals-field">

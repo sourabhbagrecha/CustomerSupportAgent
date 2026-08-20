@@ -4,7 +4,7 @@
 // dependency-free (no React, no fetch) so RunComparison and RunsTable can
 // share one source of truth for numbers that must agree between the summary
 // block and the scenario matrix.
-import type { EvalRun, EvalRunJudgeCalibration, EvalRunPricing, EvalScenario } from "../../types";
+import type { EvalJudgeStates, EvalRun, EvalRunJudgeCalibration, EvalRunPricing, EvalScenario } from "../../types";
 
 export interface RunSummary {
   total: number;
@@ -41,6 +41,41 @@ export function runCostUsd(run: Pick<EvalRun, "scenarios" | "pricing">): number 
 function sumOrNull(values: Array<number | null>): number | null {
   const present = values.filter((v): v is number => v !== null);
   return present.length > 0 ? present.reduce((a, b) => a + b, 0) : null;
+}
+
+// A retired scenario (its file deleted from evals/scenarios/) stays recorded
+// in every run archived before the deletion. The workbench reads as "how the
+// current suite scores", so those rows are dropped from the runs before any
+// view sees them: filtering once, here, is what keeps the scorecard totals,
+// the chart, and the scenario grid quoting the same denominator. The archived
+// records themselves are never rewritten, so the history stays intact on disk.
+//
+// `liveNumbers` is null when the scenario catalogue could not be loaded; then
+// nothing is filtered, since showing a stale row beats blanking the workbench.
+export function hideRetiredScenarios(run: EvalRun, liveNumbers: ReadonlySet<number> | null): EvalRun {
+  if (!liveNumbers) return run;
+  const scenarios = run.scenarios.filter((s) => liveNumbers.has(s.number));
+  if (scenarios.length === run.scenarios.length) return run;
+  return {
+    ...run,
+    scenarios,
+    // Recounted rather than carried over: judgeStates on the record describes
+    // the scenarios as they ran, and a retired scenario that had been judged
+    // would otherwise leave the scorecard's judge counts above the number of
+    // rows the grid can show.
+    judgeStates: countJudgeStates(scenarios),
+    scenarioFilter: run.scenarioFilter === null ? null : run.scenarioFilter.filter((n) => liveNumbers.has(n)),
+    incompleteScenarios: run.incompleteScenarios.filter((n) => liveNumbers.has(n)),
+  };
+}
+
+// Mirrors server/src/evals/runRecord.ts countJudgeStates.
+function countJudgeStates(scenarios: EvalScenario[]): EvalJudgeStates {
+  return {
+    scored: scenarios.filter((s) => s.judgeState === "scored").length,
+    unscored: scenarios.filter((s) => s.judgeState === "unscored").length,
+    notApplicable: scenarios.filter((s) => s.judgeState === null).length,
+  };
 }
 
 export function summarizeRun(run: EvalRun): RunSummary {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { paretoFrontier, scenarioDisagrees, type ParetoPoint } from "./evalMath";
+import type { EvalJudgeState, EvalRun, EvalScenario, EvalScenarioStatus } from "../../types";
+import { hideRetiredScenarios, paretoFrontier, scenarioDisagrees, summarizeRun, type ParetoPoint } from "./evalMath";
 
 // Pure functions only: the comparison chart claims "these runs are the
 // shortlist" and the heatmap filter claims "these are the scenarios that
@@ -80,5 +81,93 @@ describe("scenarioDisagrees", () => {
   it("is false below two runs, where there is nothing to disagree with", () => {
     expect(scenarioDisagrees([])).toBe(false);
     expect(scenarioDisagrees(["fail"])).toBe(false);
+  });
+});
+
+function scenario(number: number, status: EvalScenarioStatus, judgeState: EvalJudgeState = null): EvalScenario {
+  return {
+    number,
+    name: `scenario-${number}`,
+    status,
+    latencyMs: 1000,
+    tokensIn: 100,
+    tokensOut: 10,
+    notes: [],
+    judgeNotes: [],
+    judgeState,
+    repeatCount: 1,
+    repeatPassCount: status === "pass" ? 1 : 0,
+    repeatStatuses: [status],
+    latencyMeanMs: 1000,
+    latencySpreadMs: 0,
+  };
+}
+
+function run(scenarios: EvalScenario[], overrides: Partial<EvalRun> = {}): EvalRun {
+  return {
+    schemaVersion: 1,
+    runId: "20260820T000000Z-model",
+    label: "model",
+    source: "cli",
+    status: "completed",
+    startedAt: "2026-08-20T00:00:00.000Z",
+    finishedAt: "2026-08-20T00:01:00.000Z",
+    durationMs: 60000,
+    exitCode: 0,
+    failureReason: null,
+    provider: { baseUrl: "https://api.openai.com/v1", primaryModel: "m", fallbackModel: "m", judgeModel: "m", judgeBaseUrl: "https://api.openai.com/v1" },
+    scenarioFilter: null,
+    gitCommit: null,
+    promptSha256: "abc",
+    fixturesSha256: "def",
+    judgeStates: { scored: 0, unscored: 0, notApplicable: scenarios.length },
+    scenarios,
+    pricing: null,
+    incompleteScenarios: [],
+    judgeCalibration: null,
+    ...overrides,
+  };
+}
+
+describe("hideRetiredScenarios", () => {
+  const archived = run([scenario(1, "pass"), scenario(13, "pass", "scored"), scenario(14, "fail")], {
+    judgeStates: { scored: 1, unscored: 0, notApplicable: 2 },
+    scenarioFilter: [1, 13, 14],
+    incompleteScenarios: [13],
+  });
+  const live = new Set([1, 14]);
+
+  it("drops a scenario the current suite no longer contains", () => {
+    expect(hideRetiredScenarios(archived, live).scenarios.map((s) => s.number)).toEqual([1, 14]);
+  });
+
+  it("recounts the judge states so they describe only the rows that remain", () => {
+    expect(hideRetiredScenarios(archived, live).judgeStates).toEqual({ scored: 0, unscored: 0, notApplicable: 2 });
+  });
+
+  it("keeps the summary denominator in step with the visible rows", () => {
+    const summary = summarizeRun(hideRetiredScenarios(archived, live));
+    expect(summary.total).toBe(2);
+    expect(summary.pass).toBe(1);
+    expect(summary.passRate).toBe(0.5);
+  });
+
+  it("prunes the retired number out of the subset filter and the incomplete list", () => {
+    const visible = hideRetiredScenarios(archived, live);
+    expect(visible.scenarioFilter).toEqual([1, 14]);
+    expect(visible.incompleteScenarios).toEqual([]);
+  });
+
+  it("leaves a full-suite run marked as one: a null filter stays null", () => {
+    const full = run([scenario(1, "pass"), scenario(13, "pass")]);
+    expect(hideRetiredScenarios(full, live).scenarioFilter).toBeNull();
+  });
+
+  it("returns the same run untouched when the catalogue is unavailable", () => {
+    expect(hideRetiredScenarios(archived, null)).toBe(archived);
+  });
+
+  it("returns the same run untouched when nothing was retired", () => {
+    expect(hideRetiredScenarios(archived, new Set([1, 13, 14]))).toBe(archived);
   });
 });
