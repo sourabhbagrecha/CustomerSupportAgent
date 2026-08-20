@@ -42,28 +42,25 @@ Three nodes (`server/src/agent/graph.ts`): `loadContext` gathers orders, payment
 
 ## Key decisions
 
-Short list; the alternatives considered and rejected are in [docs/decisions.md](docs/decisions.md).
+Alternatives considered and rejected are in [docs/decisions.md](docs/decisions.md).
 
-- **The model proposes, code disposes.** The policy engine reads only order and payment facts plus `fixtures/policy.json`, never what the model claims, so a jailbreak cannot raise a cap.
-- **Idempotency keys exclude every model-supplied value:** `sha256(threadId + actionType + orderId + amount)`, computed from server state, which is what makes the timeout-after-success double-refund trap unexploitable.
-- **A claimed prior promise unlocks money only when a `get_conversation_history` call this turn actually returned a match,** not when the call merely happened.
-- **`FALLBACK_MODEL` may name a different vendor than `PRIMARY_MODEL`.** A same-vendor fallback goes down with its vendor; ids containing `/` route to OpenRouter regardless of `OPENAI_BASE_URL`.
-- **One SQLite file, no Postgres, Redis, Docker, queue, or vector DB.** Transactional writes, FTS5 retrieval, and the checkpoint store in one file, nothing for an evaluator to stand up.
-- **Observability is the `events` table plus SSE,** not an external tracing SDK. Langfuse was scoped and cut; the schema is sink-shaped so an exporter stays additive.
-- **No agent framework.** Mastra was the strongest candidate and was rejected: it automates the loop scaffolding (four files) and not the money-safety layer, and it wants to own the loop that must not own `issue_refund`.
-- **Retrieval is FTS5 plus small recency and order-linkage boosts,** not embeddings or a reranker, at roughly 200 committed conversations.
+- **TypeScript and React**: personal preference, and one language across server, web, and evals.
+- **LangGraph.js**: prior experience, plus `interrupt()` and a SQLite checkpointer in-library, so human-in-the-loop needs no external service.
+- **One SQLite file** for app data, ledger, events, and checkpoints, with FTS5 for retrieval: nothing to host, and no vector database.
+- **No Langfuse or LangSmith**: everything stays local, so observability is a thin wrapper writing to an `events` table and streaming it over SSE.
+- **No agent framework** (Mastra evaluated): it automates the agent loop, not the money-safety layer that is actually being scored.
+- **`issue_refund` and `issue_credit` are pipeline entry points, not model tools**: policy check, ledger row, call, reconcile, so a jailbreak cannot move money.
+- **Idempotency key derived from server state only**, never model input: a retry after a timeout cannot double-refund.
+- **Fallback model may be a different vendor**: a same-vendor fallback goes down with its vendor.
+- **23 eval scenarios against a real model, `RESULTS.md` committed**: measured quality without spending your own credit.
 
 ## Assumptions
 
 Full list in [docs/assumptions.md](docs/assumptions.md).
 
-- INR throughout; every policy value (₹500 auto-approval cap, 30-day window) is invented and centralized in `fixtures/policy.source.json`.
-- Single tenant, no auth, English only. `override_by` and `resolved_by` are free-text identities, not logins.
-- Precedence on conflicting information: structured order and payment data, then `policy.json`, then policy text, then conversation history, then the customer's unverified claims.
-- Policy outranks any prior agent promise: honor it up to what policy allows now, escalate the gap, never silently pay it in full.
-- The chat pane is the customer's surface, so decisions happen only in the audit queue, and the customer-facing notice is composed in code rather than phrased by a model.
-- Idempotency keys are thread-scoped, so the same refund asked from two threads yields two ledger rows. Accepted and visible in the audit ledger; the business-scoped fix is in the roadmap.
-- Ownership is enforced four times over (policy engine, read tools, provider adapter, database trigger), and a foreign order and a missing order return identical wording so the agent is never an existence oracle.
+- **INR, single tenant, no auth, English only**: a one-day box, and everything cut is in the roadmap rather than half-built.
+- **Idempotency keys are thread-scoped**: the same refund asked from two threads writes two ledger rows, visible in the audit ledger.
+- **The chat pane is the customer's surface**: approvals, rejections, and internal denial strings live only in the audit tab.
 
 ## Evals
 
