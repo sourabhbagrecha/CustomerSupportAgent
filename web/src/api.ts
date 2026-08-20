@@ -130,14 +130,27 @@ export function cancelEvalRun(): Promise<{ ok: true }> {
   return request("/api/evals/current/cancel", { method: "POST" });
 }
 
+// Demo-only: restores seed customers/orders/payments and clears the ledger,
+// approvals, escalations, threads, and faults. Route and reset logic live in
+// server/src/db/resetDemo.ts (owned by another workstream); this is just the
+// typed call, matching the existing `{ ok: true }` shape used by the eval
+// run endpoints above.
+export function resetDemo(): Promise<{ ok: true }> {
+  return request("/api/demo/reset", { method: "POST" });
+}
+
+// P0-3: internalNote (audit-only, AuditPanel.tsx only) and customerNote (the
+// only one notify.ts ever relays to the customer) are two independent
+// fields, never merged into one generic "remark" again.
 export function resolveApproval(
   threadId: string,
   approvalId: number,
   decision: "approve" | "reject",
-  remark?: string,
+  customerNote?: string,
+  internalNote?: string,
 ): Promise<ChatResponse> {
   return request(`/api/threads/${encodeURIComponent(threadId)}/approvals/${approvalId}/resolve`, {
     method: "POST",
-    body: JSON.stringify({ decision, remark }),
+    body: JSON.stringify({ decision, customerNote, internalNote }),
   });
 }

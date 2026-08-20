@@ -13,3 +13,4 @@ evals/.artifacts/
 .playwright/
 .vscode/
 .claude/
+local-only

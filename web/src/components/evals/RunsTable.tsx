@@ -1,6 +1,17 @@
 import { formatTime } from "../../format";
 import type { EvalRun } from "../../types";
-import { describePricing, formatRates, formatSeconds, formatTokens, formatUsd, providerHost, shortHash, summarizeRun } from "./evalMath";
+import {
+  calibrationTitle,
+  describeCalibration,
+  describePricing,
+  formatRates,
+  formatSeconds,
+  formatTokens,
+  formatUsd,
+  providerHost,
+  shortHash,
+  summarizeRun,
+} from "./evalMath";
 
 interface RunsTableProps {
   runs: EvalRun[];
@@ -94,6 +105,14 @@ export function RunsTable({ runs, loading, error, selectedIds, onToggleSelect, o
                       {fallbackDiffers && <div className="eval-run-submeta">fallback: {run.provider.fallbackModel}</div>}
                       <div className="eval-run-submeta">
                         via {providerHost(run.provider.baseUrl)}, judge {run.provider.judgeModel ?? "unset"}
+                      </div>
+                      {/* Judge calibration (task P1-6): agreement against the
+                          hand-labeled golden set in evals/goldenSet.ts, only
+                          present on a full-suite run. The disclaimer that the
+                          golden set is drafted/not human-verified rides in
+                          the title tooltip rather than the row itself. */}
+                      <div className="eval-run-submeta" title={calibrationTitle(run.judgeCalibration)}>
+                        {describeCalibration(run.judgeCalibration)}
                       </div>
                     </td>
                     <td>

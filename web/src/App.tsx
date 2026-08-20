@@ -15,6 +15,7 @@ import { Chat } from "./components/Chat";
 import { EvalsPanel } from "./components/EvalsPanel";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { PersonaPanel } from "./components/PersonaPanel";
+import { ResetDemoButton } from "./components/ResetDemoButton";
 import { TracePanel } from "./components/TracePanel";
 import type {
   ApprovalRow,
@@ -232,6 +233,7 @@ export function App() {
             Evals
           </button>
         </nav>
+        <ResetDemoButton />
       </header>
       {loadError && <div className="inline-error app-load-error">{loadError}</div>}
       {/* The console unmounts rather than hiding when the audit tab is active.
@@ -263,6 +265,7 @@ export function App() {
             sending={sending}
             streamingReply={streamingReply}
             error={chatError}
+            events={events}
             onSend={handleSend}
           />
           <TracePanel events={events} />

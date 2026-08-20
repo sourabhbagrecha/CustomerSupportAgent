@@ -30,6 +30,27 @@ body {
   font-weight: 600;
 }
 
+/* Reset-demo control, pinned to the header's right edge so it stays visible
+   from every tab. Same "demo-only" visual signal as .fault-caption below
+   (muted italic caption, no RBAC/route gating, just a label). */
+.reset-demo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.reset-demo-caption {
+  font-size: 11px;
+  color: #8a919c;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.reset-demo-error {
+  max-width: 260px;
+}
+
 .app-layout {
   flex: 1;
   display: grid;
@@ -309,6 +330,26 @@ body {
   gap: 10px;
 }
 
+.chat-panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.chat-panel-header h2 {
+  margin: 0 0 10px;
+}
+
+.chat-cost-badge {
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #565f6d;
+  white-space: nowrap;
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -538,6 +579,13 @@ body {
   white-space: nowrap;
 }
 
+.trace-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  color: #8a919c;
+  white-space: nowrap;
+}
+
 .trace-raw {
   margin: 6px 0 0;
   padding: 6px;
@@ -567,6 +615,14 @@ body {
 
 .trace-entry-fault {
   border-color: #9333ea;
+}
+
+.trace-entry-step-context {
+  border-color: #2563eb;
+}
+
+.trace-entry-step-rollup {
+  border-color: #16a34a;
 }
 
 /* Header tabs */

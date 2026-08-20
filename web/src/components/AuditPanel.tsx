@@ -9,29 +9,57 @@ interface AuditPanelProps {
   onResolved: (threadId: string, result: ChatResponse) => void;
 }
 
+// P0-1 / P2-12 defense in depth: a policy-engine `allow` verdict always
+// reads "Within policy: amount <= cap ...". The real fix is upstream
+// (agentTools.ts's escalateToHumanTool only ever populates denialReason from
+// a row whose status is actually `denied`), but this is a second, cheap
+// guard directly at render time so an allow- or pending-worded string can
+// never render under "Denied because" even if some future code path regresses.
+function looksLikeDenial(reason: string): boolean {
+  const normalized = reason.trim().toLowerCase();
+  return !normalized.startsWith("within policy");
+}
+
 export function AuditPanel({ onResolved }: AuditPanelProps) {
   const [statusFilter, setStatusFilter] = useState<LedgerStatus | "">("");
   const [resolvingId, setResolvingId] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [resolveError, setResolveError] = useState<string | null>(null);
-  const [remarks, setRemarks] = useState<Record<number, string>>({});
+  // P0-3: two independent drafts per pending approval. internalNotes is
+  // audit-only and never leaves this panel except into the ledger's audit
+  // trail; customerNotes is the only text that ever reaches the customer
+  // (via server/src/agent/notify.ts), behind a profanity backstop.
+  const [internalNotes, setInternalNotes] = useState<Record<number, string>>({});
+  const [customerNotes, setCustomerNotes] = useState<Record<number, string>>({});
   const { approvals, ledger, loading, error, lastUpdated, refresh } = useAudit(statusFilter, resolvingId !== null);
 
   async function handleResolve(approval: PendingApprovalSummary, decision: "approve" | "reject") {
     setResolvingId(approval.id);
     setNotice(null);
     setResolveError(null);
-    const remark = (remarks[approval.id] ?? "").trim();
+    const internalNote = (internalNotes[approval.id] ?? "").trim();
+    const customerNote = (customerNotes[approval.id] ?? "").trim();
     const labels = approvalActionLabels(approval);
     const verb = decision === "approve" ? labels.approve : labels.reject;
     try {
-      const result = await resolveApproval(approval.threadId, approval.id, decision, remark || undefined);
+      const result = await resolveApproval(
+        approval.threadId,
+        approval.id,
+        decision,
+        customerNote || undefined,
+        internalNote || undefined,
+      );
       // The route returns the resumed customer turn (or the notice text for
       // an escalation), but the operator here may not have that thread open,
       // so App re-hydrates that thread's transcript from state rather than
       // this response being rendered directly in the queue.
       setNotice(`${verb}. Thread ${approval.threadId} is now ${result.status.replace(/_/g, " ")}.`);
-      setRemarks((prev) => {
+      setInternalNotes((prev) => {
+        const next = { ...prev };
+        delete next[approval.id];
+        return next;
+      });
+      setCustomerNotes((prev) => {
         const next = { ...prev };
         delete next[approval.id];
         return next;
@@ -76,8 +104,9 @@ export function AuditPanel({ onResolved }: AuditPanelProps) {
           {!loading && !error && approvals.length === 0 && <p className="audit-empty">No approvals waiting.</p>}
           {approvals.map((approval) => {
             const labels = approvalActionLabels(approval);
-            const remarkValue = remarks[approval.id] ?? "";
-            const remarkNeeded = remarkValue.trim().length === 0;
+            const internalNoteValue = internalNotes[approval.id] ?? "";
+            const customerNoteValue = customerNotes[approval.id] ?? "";
+            const customerNoteNeeded = customerNoteValue.trim().length === 0;
             return (
               <article key={approval.id} className="audit-queue-item">
                 <header className="audit-queue-head">
@@ -100,7 +129,7 @@ export function AuditPanel({ onResolved }: AuditPanelProps) {
                       <dd>{approval.orderId}</dd>
                     </>
                   )}
-                  {approval.denialReason && (
+                  {approval.denialReason && looksLikeDenial(approval.denialReason) && (
                     <>
                       <dt>Denied because</dt>
                       <dd>{approval.denialReason}</dd>
@@ -119,11 +148,22 @@ export function AuditPanel({ onResolved }: AuditPanelProps) {
                 </dl>
                 <p className="audit-queue-thread">{approval.threadId}</p>
                 <label className="approval-remark">
-                  Remark {approval.kind === "escalation" ? "(required to uphold)" : "(required to reject)"}
+                  Internal note (staff only, never sent to the customer)
                   <textarea
-                    value={remarkValue}
-                    onChange={(event) => setRemarks((prev) => ({ ...prev, [approval.id]: event.target.value }))}
-                    placeholder="Explain the decision so the customer has context..."
+                    value={internalNoteValue}
+                    onChange={(event) => setInternalNotes((prev) => ({ ...prev, [approval.id]: event.target.value }))}
+                    placeholder="Private reasoning for the audit trail..."
+                    rows={2}
+                    disabled={resolvingId !== null}
+                  />
+                </label>
+                <label className="approval-remark">
+                  Customer-facing explanation{" "}
+                  {approval.kind === "escalation" ? "(required to uphold)" : "(required to reject)"}
+                  <textarea
+                    value={customerNoteValue}
+                    onChange={(event) => setCustomerNotes((prev) => ({ ...prev, [approval.id]: event.target.value }))}
+                    placeholder="Explain the decision to the customer, in the customer's own terms..."
                     rows={2}
                     disabled={resolvingId !== null}
                   />
@@ -140,7 +180,7 @@ export function AuditPanel({ onResolved }: AuditPanelProps) {
                   <button
                     type="button"
                     className="secondary-button"
-                    disabled={resolvingId !== null || remarkNeeded}
+                    disabled={resolvingId !== null || customerNoteNeeded}
                     onClick={() => void handleResolve(approval, "reject")}
                   >
                     {labels.reject}

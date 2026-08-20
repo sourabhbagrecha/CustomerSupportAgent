@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { FaultName, FaultsSnapshot, Persona } from "../types";
 import { FAULT_NAMES } from "../types";
 
@@ -6,7 +7,7 @@ interface PersonaPanelProps {
   selectedCustomerId: string | null;
   onSelectPersona: (persona: Persona) => void;
   faults: FaultsSnapshot;
-  onToggleFault: (name: FaultName, enabled: boolean) => void;
+  onToggleFault: (name: FaultName, enabled: boolean) => Promise<void>;
   onClearFaults: () => void;
   faultsBusy: boolean;
 }
@@ -24,6 +25,24 @@ export function PersonaPanel({
   onClearFaults,
   faultsBusy,
 }: PersonaPanelProps) {
+  // Track which individual fault is mid-flight so the checkbox reflects a
+  // pending state and only shows as applied once the server ack (setFault)
+  // resolves, rather than trusting the browser's optimistic native toggle.
+  const [pendingFaults, setPendingFaults] = useState<Set<FaultName>>(new Set());
+
+  async function handleToggle(name: FaultName, checked: boolean) {
+    setPendingFaults((prev) => new Set(prev).add(name));
+    try {
+      await onToggleFault(name, checked);
+    } finally {
+      setPendingFaults((prev) => {
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      });
+    }
+  }
+
   return (
     <aside className="panel persona-panel">
       <section>
@@ -59,18 +78,28 @@ export function PersonaPanel({
           {FAULT_NAMES.map((name) => {
             const state = faults[name];
             const enabled = state?.enabled ?? false;
+            const pending = pendingFaults.has(name);
+            const inputId = `fault-toggle-${name}`;
             return (
               <li key={name} className="fault-row">
-                <label>
+                <label htmlFor={inputId}>
                   <input
+                    id={inputId}
                     type="checkbox"
                     checked={enabled}
-                    disabled={faultsBusy}
-                    onChange={(event) => onToggleFault(name, event.target.checked)}
+                    disabled={faultsBusy || pending}
+                    aria-busy={pending}
+                    onChange={(event) => {
+                      void handleToggle(name, event.target.checked);
+                    }}
                   />
                   <span>{faultLabel(name)}</span>
                 </label>
-                {state?.remaining !== undefined && <span className="fault-remaining">{state.remaining} left</span>}
+                {pending ? (
+                  <span className="fault-remaining">updating...</span>
+                ) : (
+                  state?.remaining !== undefined && <span className="fault-remaining">{state.remaining} left</span>
+                )}
               </li>
             );
           })}

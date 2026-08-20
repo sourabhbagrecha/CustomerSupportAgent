@@ -130,6 +130,77 @@ function DeltaChip({ delta }: { delta: Delta | null }) {
   return <span className={`eval-delta eval-delta-${delta.direction}`}>{delta.label}</span>;
 }
 
+const NOTE_VALUE_MAX_CHARS = 80;
+
+function truncateNoteValue(value: string): string {
+  const trimmed = value.trim();
+  return trimmed.length > NOTE_VALUE_MAX_CHARS ? `${trimmed.slice(0, NOTE_VALUE_MAX_CHARS - 1)}…` : trimmed;
+}
+
+// Vitest quotes string values in single quotes and escapes any apostrophe
+// inside them as \'; unwrap that back to plain text so the UI shows "I'll
+// process..." rather than "'I\'ll process...'". Bare tokens (undefined,
+// null, true, an object literal dump) pass through unchanged.
+function unwrapNoteValue(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length >= 2 && trimmed.startsWith("'") && trimmed.endsWith("'")) {
+    return trimmed.slice(1, -1).replace(/\\'/g, "'");
+  }
+  return trimmed;
+}
+
+interface ParsedAssertionNote {
+  assertion: string | null;
+  expected: string;
+  actual: string;
+}
+
+// Failure notes (from a failing scenario assertion) and judge notes (from a
+// failing judge rubric check) both end up holding a raw Vitest message like
+// "[approve] expected 'I can see order ord_005 for the Air P…' to be null".
+// That reads as a stack-trace dump: "expected" here names the value the
+// code actually received, not what the test wanted, and the // Object.is
+// equality suffix is implementation noise. Pull the two sides apart and
+// re-present them as plain "expected:"/"actual:" lines under whatever
+// prefix names the assertion (an "[approve]"/"[reject]" branch tag, or a
+// custom assertion message). Anything that is not a recognizable
+// "expected X to be Y" tail (a plain prose note) is left as-is.
+const ASSERTION_TAIL_RE = /expected\s+(.+?)\s+to\s+be\s+(.+?)(?:\s*\/\/.*)?$/;
+
+function parseAssertionNote(note: string): ParsedAssertionNote | null {
+  const match = ASSERTION_TAIL_RE.exec(note);
+  if (!match) return null;
+  const receivedRaw = match[1] ?? "";
+  const expectedRaw = match[2] ?? "";
+  const prefix = note.slice(0, match.index).trim().replace(/:\s*$/, "");
+  const bracketMatch = /^\[([^\]]+)\]$/.exec(prefix);
+  const assertion = bracketMatch ? bracketMatch[1] : prefix.length > 0 ? prefix : null;
+  return {
+    assertion: assertion ? truncateNoteValue(assertion) : null,
+    expected: truncateNoteValue(unwrapNoteValue(expectedRaw)),
+    actual: truncateNoteValue(unwrapNoteValue(receivedRaw)),
+  };
+}
+
+// Renders one note (scenario failure note or judge note) as plain words
+// instead of the raw assertion string, falling back to the raw text for
+// notes that are not an "expected X to be Y" assertion (plain prose).
+function FailureNote({ note, source }: { note: string; source: "judge" | null }) {
+  const parsed = parseAssertionNote(note);
+  const isJudge = source === "judge";
+  if (!parsed) {
+    return <li className={isJudge ? "eval-judge-note" : undefined}>{isJudge ? `Judge: ${note}` : note}</li>;
+  }
+  const heading = isJudge ? `Judge${parsed.assertion ? `: ${parsed.assertion}` : ""}` : parsed.assertion;
+  return (
+    <li className={isJudge ? "eval-judge-note" : undefined}>
+      {heading && <div>{heading}</div>}
+      <div>expected: {parsed.expected}</div>
+      <div>actual: {parsed.actual}</div>
+    </li>
+  );
+}
+
 function RunColumnHeader({
   run,
   isBaseline,
@@ -368,12 +439,10 @@ export function RunComparison({ selectedRuns, baselineId, onSetBaseline }: RunCo
                                       <strong>{run.label}</strong>
                                       <ul className="eval-notes-list">
                                         {scenario.notes.map((note, i) => (
-                                          <li key={`note-${i}`}>{note}</li>
+                                          <FailureNote key={`note-${i}`} note={note} source={null} />
                                         ))}
                                         {scenario.judgeNotes.map((note, i) => (
-                                          <li key={`judge-${i}`} className="eval-judge-note">
-                                            Judge: {note}
-                                          </li>
+                                          <FailureNote key={`judge-${i}`} note={note} source="judge" />
                                         ))}
                                       </ul>
                                     </div>

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import type { ApprovalRow, ChatMessage } from "../types";
+import type { AgentEvent, ApprovalRow, ChatMessage } from "../types";
 
 interface ChatProps {
   personaLabel: string | null;
@@ -8,7 +8,50 @@ interface ChatProps {
   sending: boolean;
   streamingReply: string;
   error: string | null;
+  events: AgentEvent[];
   onSend: (text: string) => void;
+}
+
+interface ThreadTotals {
+  turns: number;
+  costUsd: number | null;
+  wallTimeMs: number;
+}
+
+// P2-9: sums every rollup event in the thread (one per completed turn, see
+// server/src/agent/graph.ts and server/src/events/emitter.ts's
+// emitTurnRollup), so this is a running total across the whole conversation,
+// not just the latest reply. `events` already carries full thread history:
+// useEvents replays every stored event for the thread on (re)connect.
+// costUsd stays null only when every turn's own cost was unresolvable; a
+// thread with at least one priced turn still reports the sum of what could
+// be priced, same "n/a rather than a silent guess" rule as the eval suite.
+function threadTotals(events: AgentEvent[]): ThreadTotals {
+  let turns = 0;
+  let costUsd: number | null = null;
+  let wallTimeMs = 0;
+  for (const event of events) {
+    if (event.type !== "step" || event.payload.step !== "rollup") continue;
+    turns += 1;
+    const cost = event.payload.costUsd;
+    if (typeof cost === "number") costUsd = (costUsd ?? 0) + cost;
+    const wall = event.payload.wallTimeMs;
+    if (typeof wall === "number") wallTimeMs += wall;
+  }
+  return { turns, costUsd, wallTimeMs };
+}
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+function formatCost(costUsd: number | null): string {
+  if (costUsd === null) return "cost n/a";
+  return costUsd < 0.01 ? `$${costUsd.toFixed(4)}` : `$${costUsd.toFixed(2)}`;
+}
+
+function formatWallTime(ms: number): string {
+  return ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
 // Customer-facing copy only. The policy engine's own strings (denialReason,
@@ -28,9 +71,11 @@ export function Chat({
   sending,
   streamingReply,
   error,
+  events,
   onSend,
 }: ChatProps) {
   const [draft, setDraft] = useState("");
+  const totals = threadTotals(events);
   // A policy_approval row means the graph is parked mid-turn on interrupt()
   // inside the money tool, and the only defined way to continue that thread is
   // Command({ resume }) from the resolve route, so a fresh turn cannot be
@@ -49,7 +94,17 @@ export function Chat({
 
   return (
     <main className="panel chat-panel">
-      <h2>{personaLabel ? `Chat: ${personaLabel}` : "Select a persona to start"}</h2>
+      <div className="chat-panel-header">
+        <h2>{personaLabel ? `Chat: ${personaLabel}` : "Select a persona to start"}</h2>
+        {personaLabel && totals.turns > 0 && (
+          <span
+            className="chat-cost-badge"
+            title={`Cumulative across ${plural(totals.turns, "turn")} in this thread`}
+          >
+            {formatCost(totals.costUsd)} &middot; {formatWallTime(totals.wallTimeMs)}
+          </span>
+        )}
+      </div>
       <div className="chat-messages">
         {messages.map((message, index) => (
           <div key={index} className={`chat-bubble chat-bubble-${message.role}`}>

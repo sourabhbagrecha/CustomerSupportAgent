@@ -46,7 +46,12 @@ export interface ApprovalRow {
   denialReason: string | null;
   category: string | null;
   context: string | null;
+  // remark: the reviewer's internal note (audit-only). customerNote: the
+  // separate customer-facing explanation (server/src/agent/notify.ts is the
+  // only place that ever relays it to the customer). Mirrors ApprovalRow in
+  // server/src/ledger/approvals.ts.
   remark: string | null;
+  customerNote: string | null;
   status: "pending" | "approved" | "rejected";
   createdAt: string;
   resolvedAt: string | null;
@@ -180,6 +185,14 @@ export interface EvalScenario {
   notes: string[];
   judgeNotes: string[];
   judgeState: EvalJudgeState;
+  // Repeat-run fields (plan/task P1-6). repeatStatuses is empty for a run
+  // record written before repeats existed; treat that as one real run
+  // described by `status` alone, not as 0/1.
+  repeatCount: number;
+  repeatPassCount: number;
+  repeatStatuses: EvalScenarioStatus[];
+  latencyMeanMs: number | null;
+  latencySpreadMs: number | null;
 }
 
 export type EvalRunSource = "cli" | "ui";
@@ -213,6 +226,20 @@ export interface EvalRunPricing {
   fetchedAt: string;
 }
 
+// Judge calibration (task P1-6): agreement between the judge model that
+// graded this run and the hand-labeled golden set (evals/goldenSet.ts,
+// drafted labels, not human-verified). Only computed for a full-suite run;
+// null for a subset run or a run record written before this existed.
+export interface EvalRunJudgeCalibration {
+  goldenSetVersion: string;
+  computedAt: string;
+  total: number;
+  agreeing: number;
+  agreementPct: number;
+  judgeModel: string | null;
+  disagreements: Array<{ id: string; goldenLabel: "pass" | "fail"; judgeVerdict: "pass" | "fail" | "unscored" }>;
+}
+
 export interface EvalRun {
   schemaVersion: 1;
   runId: string;
@@ -235,6 +262,8 @@ export interface EvalRun {
   judgeStates: EvalJudgeStates;
   scenarios: EvalScenario[];
   pricing: EvalRunPricing | null;
+  incompleteScenarios: number[];
+  judgeCalibration: EvalRunJudgeCalibration | null;
 }
 
 // GET /api/evals/config response.

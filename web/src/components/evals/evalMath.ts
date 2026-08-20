@@ -4,7 +4,7 @@
 // dependency-free (no React, no fetch) so RunComparison and RunsTable can
 // share one source of truth for numbers that must agree between the summary
 // block and the scenario matrix.
-import type { EvalRun, EvalRunPricing, EvalScenario } from "../../types";
+import type { EvalRun, EvalRunJudgeCalibration, EvalRunPricing, EvalScenario } from "../../types";
 
 export interface RunSummary {
   total: number;
@@ -124,6 +124,26 @@ export function describePricing(pricing: EvalRunPricing | null): string {
 // prefix; the caller puts the full value in a title attribute.
 export function shortHash(hash: string | null): string {
   return hash ? hash.slice(0, 10) : "n/a";
+}
+
+// Judge calibration one-liner (task P1-6): rounded agreement percentage
+// against the hand-labeled golden set, or "not computed" when this run
+// never ran a full suite (calibration is skipped for subset runs) or
+// predates the feature. The longer disclaimer (drafted labels, pending
+// human review) lives in the title attribute, not the visible text, so the
+// table row stays short.
+export function describeCalibration(cal: EvalRunJudgeCalibration | null): string {
+  if (!cal) return "calibration: n/a";
+  return `calibration: ${cal.agreeing}/${cal.total} (${Math.round(cal.agreementPct)}%)`;
+}
+
+export function calibrationTitle(cal: EvalRunJudgeCalibration | null): string | undefined {
+  if (!cal) return undefined;
+  return (
+    `${cal.agreeing}/${cal.total} agreement with evals/goldenSet.ts (${cal.goldenSetVersion}). ` +
+    `Golden-set labels are drafted/ASSUMED, pending human review, not ground truth. ` +
+    `Computed ${cal.computedAt.slice(0, 10)} against judge ${cal.judgeModel ?? "unset"}.`
+  );
 }
 
 export function formatPercent(fraction: number): string {
