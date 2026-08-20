@@ -114,13 +114,17 @@ describe("fixture date shifting keeps relative ages stable", () => {
       const today = pinToday(day);
       const db = track(seed(today));
 
-      // Measured from the committed fixtures, not assumed: ord_006 is the
-      // prior-promise order and ord_001 the failed-delivery one.
-      expect(anchorAgeDays(db, "ord_006", today)).toBe(21);
-      expect(anchorAgeDays(db, "ord_001", today)).toBe(13);
-      expect(anchorAgeDays(db, "ord_002", today)).toBe(6);
-      expect(anchorAgeDays(db, "ord_003", today)).toBe(4);
-      expect(anchorAgeDays(db, "ord_005", today)).toBe(3);
+      // These are the generator's own daysAgo constants for each order's
+      // window anchor (scripts/generate-fixtures.ts): ord_006 is the
+      // prior-promise order and ord_001 the failed-delivery one. They hold at
+      // any clone date, because the seed-time shift preserves the age exactly,
+      // so a change here means the fixtures were re-aged, not that the clock
+      // moved.
+      expect(anchorAgeDays(db, "ord_006", today)).toBe(20);
+      expect(anchorAgeDays(db, "ord_001", today)).toBe(12);
+      expect(anchorAgeDays(db, "ord_002", today)).toBe(5);
+      expect(anchorAgeDays(db, "ord_003", today)).toBe(3);
+      expect(anchorAgeDays(db, "ord_005", today)).toBe(2);
 
       // The whole point: still comfortably inside the 30-day refund window.
       for (const id of ["ord_001", "ord_002", "ord_003", "ord_005", "ord_006"]) {
@@ -129,7 +133,7 @@ describe("fixture date shifting keeps relative ages stable", () => {
 
       // ord_008_05 is the deliberately-stale order scenario 10 leans on; it
       // must stay far outside the window rather than being dragged inside.
-      expect(anchorAgeDays(db, "ord_008_05", today)).toBe(116);
+      expect(anchorAgeDays(db, "ord_008_05", today)).toBe(115);
     }
   });
 

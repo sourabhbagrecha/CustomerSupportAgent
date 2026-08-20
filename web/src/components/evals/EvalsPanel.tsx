@@ -21,9 +21,10 @@ export function EvalsPanel() {
   const [baselineId, setBaselineId] = useState<string | null>(null);
   const [launcherOpen, setLauncherOpen] = useState(false);
 
-  // Both of these are "decide once, from data" defaults: which runs start
-  // checked, and whether the launcher starts expanded. Guarded by refs so a
-  // later, deliberate user action (unchecking every run, collapsing the
+  // Both of these are "decide once, from data" defaults: every archived run
+  // starts checked so the comparison opens on the full picture, and the
+  // launcher starts expanded only when the archive is empty. Guarded by refs
+  // so a later, deliberate user action (unchecking runs, collapsing the
   // launcher) is never silently overridden by the next archive refresh.
   const defaultSelectionSet = useRef(false);
   const defaultLauncherOpenSet = useRef(false);
@@ -48,7 +49,7 @@ export function EvalsPanel() {
       }
       if (!defaultSelectionSet.current && res.runs.length > 0) {
         defaultSelectionSet.current = true;
-        setSelectedIds(new Set(res.runs.slice(0, 2).map((r) => r.runId)));
+        setSelectedIds(new Set(res.runs.map((r) => r.runId)));
       } else {
         // Drop ids for runs that no longer exist (deleted since the last
         // load) so a stale selection can't quietly grow forever.

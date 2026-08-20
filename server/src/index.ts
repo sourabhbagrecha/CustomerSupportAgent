@@ -406,7 +406,7 @@ async function executeApprovalDecision(params: {
 
   // Only mark executed, and only emit the terminal event, once the effect
   // above has actually happened; on the accepted duplicate-notice residual
-  // risk (README known failure modes), see the "not paused" branch above.
+  // risk (docs/failure-modes.md), see the "not paused" branch above.
   markApprovalExecuted(database, approval.id);
   emitEvent(database, {
     threadId,
