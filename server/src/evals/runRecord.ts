@@ -45,6 +45,18 @@ export const EvalScenarioSchema = z.object({
   notes: z.array(z.string()),
   judgeNotes: z.array(z.string()),
   judgeState: EvalJudgeStateSchema,
+  // Repeat-run fields (task P1-6 "repeats"). Defaults keep a run record
+  // written before this existed parsing unchanged; repeatSummary() below is
+  // the one place that reconciles those legacy defaults against `status`
+  // rather than trusting repeatPassCount/repeatStatuses blindly, since a
+  // pre-repeats record has no real repeat data at all.
+  repeatCount: z.number().int().positive().default(1),
+  repeatPassCount: z.number().int().nonnegative().default(0),
+  repeatStatuses: z.array(EvalScenarioStatusSchema).default([]),
+  // Mean/spread (max - min) of latencyMs across repeats, present whenever at
+  // least one repeat reported a latency; null for a scenario with none.
+  latencyMeanMs: z.number().nullable().default(null),
+  latencySpreadMs: z.number().nullable().default(null),
 });
 
 export const EvalRunSourceSchema = z.enum(["cli", "ui"]);
@@ -80,6 +92,29 @@ export const EvalJudgeStatesSchema = z.object({
   notApplicable: z.number().int(),
 });
 
+// Judge calibration (task P1-6 "judge calibration"): agreement between the
+// real judge model and evals/goldenSet.ts, a small hand-labeled (drafted,
+// not human-verified; see that file's header) set of transcripts. Computed
+// once per full-suite run (never for a subset run) so the number is always
+// tied to the judge actually grading that run, at the cost of a bounded
+// dozen extra short judge calls, not per-scenario or per-repeat.
+export const EvalRunJudgeCalibrationSchema = z.object({
+  goldenSetVersion: z.string(),
+  computedAt: z.string(),
+  total: z.number().int().nonnegative(),
+  agreeing: z.number().int().nonnegative(),
+  agreementPct: z.number(),
+  judgeModel: z.string().nullable(),
+  disagreements: z.array(
+    z.object({
+      id: z.string(),
+      goldenLabel: z.enum(["pass", "fail"]),
+      judgeVerdict: z.enum(["pass", "fail", "unscored"]),
+    }),
+  ),
+});
+export type EvalRunJudgeCalibration = z.infer<typeof EvalRunJudgeCalibrationSchema>;
+
 export const EvalRunSchema = z.object({
   schemaVersion: z.literal(1),
   runId: z.string().min(1),
@@ -103,6 +138,16 @@ export const EvalRunSchema = z.object({
   judgeStates: EvalJudgeStatesSchema,
   scenarios: z.array(EvalScenarioSchema),
   pricing: EvalRunPricingSchema.nullable().default(null),
+  // Denominator discipline (task P1-6): scenario numbers that were expected
+  // (from the full suite, or the requested subset) but produced no artifact
+  // for at least one repeat, either because the scenario crashed before
+  // withScenarioResult ever wrote a record or because vitest never reached
+  // it. Each is still present in `scenarios` above as a synthetic "fail"
+  // (see reconcileExpectedScenarios), so the pass/total ratio never shrinks
+  // silently; this list exists only so the reason is visible rather than
+  // indistinguishable from a real assertion failure.
+  incompleteScenarios: z.array(z.number().int()).default([]),
+  judgeCalibration: EvalRunJudgeCalibrationSchema.nullable().default(null),
 });
 
 export type EvalScenario = z.infer<typeof EvalScenarioSchema>;
@@ -232,16 +277,29 @@ export function groupByScenario(records: ScenarioRecord[]): EvalScenario[] {
   for (const [number, recs] of byNumber) {
     recs.sort((a, b) => (a.suffix ?? "").localeCompare(b.suffix ?? ""));
     const name = recs[0]?.name ?? `scenario_${number}`;
+    const status = combineStatus(recs.map((r) => r.status));
+    const latencyMs = sumOrNull(recs.map((r) => r.latencyMs));
+    // groupByScenario groups sub-cases (e.g. scenario 7's approve/reject)
+    // within ONE repeat, not across repeats, so it describes exactly one
+    // real run: repeat fields are filled from that single outcome here, the
+    // same defaults mergeRepeatGroups' single-repeat identity branch would
+    // produce. mergeRepeatGroups (called by the runner after this) is what
+    // actually combines multiple repeats together.
     groups.push({
       number,
       name,
-      status: combineStatus(recs.map((r) => r.status)),
-      latencyMs: sumOrNull(recs.map((r) => r.latencyMs)),
+      status,
+      latencyMs,
       tokensIn: sumOrNull(recs.map((r) => r.tokensIn)),
       tokensOut: sumOrNull(recs.map((r) => r.tokensOut)),
       notes: recs.map((r) => (r.suffix ? `[${r.suffix}] ${r.note}` : r.note)),
       judgeNotes: recs.filter((r) => r.judge).map((r) => `${r.suffix ? `[${r.suffix}] ` : ""}${r.judge!.notes}`),
       judgeState: combineJudgeState(recs.map((r) => r.judgeState ?? null)),
+      repeatCount: 1,
+      repeatPassCount: status === "pass" ? 1 : 0,
+      repeatStatuses: [status],
+      latencyMeanMs: latencyMs,
+      latencySpreadMs: latencyMs !== null ? 0 : null,
     });
   }
   return groups.sort((a, b) => a.number - b.number);
@@ -253,6 +311,178 @@ export function countJudgeStates(scenarios: EvalScenario[]): EvalRun["judgeState
     unscored: scenarios.filter((g) => g.judgeState === "unscored").length,
     notApplicable: scenarios.filter((g) => g.judgeState === null).length,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Denominator discipline (task P1-6): a scenario that crashed, was skipped,
+// or that vitest never reached must count as failed against the expected
+// total, never simply be absent from `scenarios` (the bug behind the
+// drifting 19/19 -> 18/19 -> 15/18 ratios in the archived runs).
+// ---------------------------------------------------------------------------
+
+function syntheticFailScenario(expected: ScenarioFile): EvalScenario {
+  return {
+    number: expected.number,
+    name: expected.name,
+    status: "fail",
+    latencyMs: null,
+    tokensIn: null,
+    tokensOut: null,
+    notes: [
+      "No result was recorded for this scenario: it crashed before writing an artifact, was skipped, or the run ended before vitest reached it. Counted as failed, not omitted, so the pass/total ratio never shrinks silently.",
+    ],
+    judgeNotes: [],
+    judgeState: null,
+    repeatCount: 1,
+    repeatPassCount: 0,
+    repeatStatuses: ["fail"],
+    latencyMeanMs: null,
+    latencySpreadMs: null,
+  };
+}
+
+export interface ReconcileResult {
+  scenarios: EvalScenario[];
+  missingNumbers: number[];
+}
+
+// Fills in a synthetic "fail" row for every expected scenario number that
+// has no group in `scenarios`, so the returned array always has exactly
+// `expected.length` entries, sorted by number. Applied per repeat, before
+// mergeRepeatGroups combines repeats together.
+export function reconcileExpectedScenarios(scenarios: EvalScenario[], expected: ScenarioFile[]): ReconcileResult {
+  const present = new Map(scenarios.map((s) => [s.number, s]));
+  const missingNumbers: number[] = [];
+  const filled: EvalScenario[] = [];
+  for (const exp of expected) {
+    const found = present.get(exp.number);
+    if (found) {
+      filled.push(found);
+    } else {
+      missingNumbers.push(exp.number);
+      filled.push(syntheticFailScenario(exp));
+    }
+  }
+  filled.sort((a, b) => a.number - b.number);
+  return { scenarios: filled, missingNumbers };
+}
+
+// The pass/total ratio and status a scenario should be reported with,
+// reconciling the legacy case (a run record written before repeats existed
+// has repeatStatuses: [] and repeatPassCount: 0 by schema default,
+// regardless of whether `status` was actually "pass") against the modern
+// case (repeatStatuses populated by mergeRepeatGroups). Always use this
+// instead of reading repeatCount/repeatPassCount directly.
+export function repeatSummary(
+  s: Pick<EvalScenario, "status" | "repeatCount" | "repeatPassCount" | "repeatStatuses">,
+): { count: number; passCount: number; statuses: ScenarioStatus[] } {
+  if (s.repeatStatuses.length > 0) {
+    return { count: s.repeatCount, passCount: s.repeatPassCount, statuses: s.repeatStatuses };
+  }
+  return { count: 1, passCount: s.status === "pass" ? 1 : 0, statuses: [s.status] };
+}
+
+export function repeatRatioLabel(
+  s: Pick<EvalScenario, "status" | "repeatCount" | "repeatPassCount" | "repeatStatuses">,
+): string {
+  const { count, passCount } = repeatSummary(s);
+  return `${passCount}/${count}`;
+}
+
+// Combines one EvalScenario[] per repeat (each already reconciled against
+// the same expected set via reconcileExpectedScenarios, so every array has
+// identical scenario numbers) into the final per-scenario view: an overall
+// status that is only "pass" when every repeat passed (fail beats
+// documented_red beats pass, same rule combineStatus already applies across
+// sub-cases, now applied across repeats too), plus the repeat ratio and
+// latency mean/spread. repeats.length === 1 is the exact common case (no
+// repeat flag passed) and returns scenarios whose repeat fields describe
+// that one real run, never a merge artifact.
+export function mergeRepeatGroups(perRepeat: EvalScenario[][]): EvalScenario[] {
+  if (perRepeat.length <= 1) {
+    const only = perRepeat[0] ?? [];
+    return only.map((s) => ({
+      ...s,
+      repeatCount: 1,
+      repeatPassCount: s.status === "pass" ? 1 : 0,
+      repeatStatuses: [s.status],
+      latencyMeanMs: s.latencyMs,
+      latencySpreadMs: s.latencyMs !== null ? 0 : null,
+    }));
+  }
+  const repeatCount = perRepeat.length;
+  const byNumber = new Map<number, EvalScenario[]>();
+  for (const group of perRepeat) {
+    for (const s of group) {
+      const arr = byNumber.get(s.number) ?? [];
+      arr.push(s);
+      byNumber.set(s.number, arr);
+    }
+  }
+  const merged: EvalScenario[] = [];
+  for (const [number, reps] of byNumber) {
+    const statuses = reps.map((r) => r.status);
+    const latencies = reps.map((r) => r.latencyMs).filter((v): v is number => v !== null);
+    const mean = latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : null;
+    const spread = latencies.length > 0 ? Math.max(...latencies) - Math.min(...latencies) : null;
+    merged.push({
+      number,
+      name: reps[0]!.name,
+      status: combineStatus(statuses),
+      latencyMs: reps[0]!.latencyMs,
+      tokensIn: reps[0]!.tokensIn,
+      tokensOut: reps[0]!.tokensOut,
+      notes: reps.flatMap((r, i) => r.notes.map((n) => `[run ${i + 1}] ${n}`)),
+      judgeNotes: reps.flatMap((r, i) => r.judgeNotes.map((n) => `[run ${i + 1}] ${n}`)),
+      judgeState: combineJudgeState(reps.map((r) => r.judgeState)),
+      repeatCount,
+      repeatPassCount: statuses.filter((s) => s === "pass").length,
+      repeatStatuses: statuses,
+      latencyMeanMs: mean,
+      latencySpreadMs: spread,
+    });
+  }
+  return merged.sort((a, b) => a.number - b.number);
+}
+
+// ---------------------------------------------------------------------------
+// CI regression gate (task P1-6, npm run evals:gate): pure comparison logic,
+// unit-tested directly (see runRecord.test.ts) rather than only exercised by
+// an actual paid gate run. A scenario regresses when the stored baseline
+// (evals/results.json, the last `npm run eval` gate snapshot) has it
+// passing and the current run's same-numbered scenario is not passing,
+// including the case where it is missing entirely from the current run
+// (treated as failed, never silently skipped, same denominator-discipline
+// rule as reconcileExpectedScenarios above).
+// ---------------------------------------------------------------------------
+
+export interface ScenarioRegression {
+  number: number;
+  name: string;
+  previousStatus: ScenarioStatus;
+  currentStatus: ScenarioStatus;
+}
+
+export function findRegressions(baseline: EvalScenario[], current: EvalScenario[]): ScenarioRegression[] {
+  const currentByNumber = new Map(current.map((s) => [s.number, s]));
+  const regressions: ScenarioRegression[] = [];
+  for (const prior of baseline) {
+    if (prior.status !== "pass") continue;
+    const now = currentByNumber.get(prior.number);
+    const currentStatus = now?.status ?? "fail";
+    if (currentStatus !== "pass") {
+      regressions.push({ number: prior.number, name: prior.name, previousStatus: prior.status, currentStatus });
+    }
+  }
+  return regressions.sort((a, b) => a.number - b.number);
+}
+
+export function describeJudgeCalibration(cal: EvalRunJudgeCalibration | null): string {
+  if (!cal) return "not computed for this run (only computed for a full-suite run)";
+  return (
+    `${cal.agreeing}/${cal.total} (${cal.agreementPct.toFixed(0)}%) agreement with the hand-labeled golden set ` +
+    `(${cal.goldenSetVersion}, evals/goldenSet.ts; labels are drafted/ASSUMED, pending human review), judge ${cal.judgeModel ?? "unset"}`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -404,6 +634,17 @@ function formatMs(ms: number | null): string {
   return ms === null ? "n/a" : `${ms} ms`;
 }
 
+// "2453 ms" for a single run (repeatCount 1, the common case, unchanged from
+// before repeats existed); "2453 ms (mean 2510 ms, spread 320 ms)" once more
+// than one repeat actually ran, so RESULTS.md reports the per-run mean and
+// spread task P1-6 asks for without cluttering the common single-run case.
+function formatLatencyCell(g: EvalScenario): string {
+  const base = formatMs(g.latencyMs);
+  if (repeatSummary(g).count <= 1 || g.latencyMeanMs === null) return base;
+  const spread = g.latencySpreadMs === null ? "n/a" : `${Math.round(g.latencySpreadMs)} ms`;
+  return `${base} (mean ${Math.round(g.latencyMeanMs)} ms, spread ${spread})`;
+}
+
 function statusBadge(status: ScenarioStatus): string {
   if (status === "pass") return "PASS";
   if (status === "fail") return "FAIL";
@@ -460,9 +701,15 @@ export function buildMarkdown(run: EvalRun, previous: EvalScenario[] | null): st
   lines.push(`- Prompt sha256 (\`server/src/agent/prompt.ts\`): ${metadata.promptSha256 || "n/a"}`);
   lines.push(`- Fixtures sha256 (\`fixtures/*.json\`): ${metadata.fixturesSha256 || "n/a"}`);
   lines.push(`- Cost: ${describeRunCost(run)}`);
+  lines.push(`- Judge calibration: ${describeJudgeCalibration(run.judgeCalibration)}`);
+  if (run.incompleteScenarios.length > 0) {
+    lines.push(
+      `- Incomplete scenarios (no result recorded for at least one repeat, counted as failed per the denominator-discipline rule): ${run.incompleteScenarios.join(", ")}`,
+    );
+  }
   lines.push("");
-  lines.push("| # | Scenario | Status | Latency | Tokens (in/out) | Judge notes |");
-  lines.push("|---|----------|--------|---------|------------------|-------------|");
+  lines.push("| # | Scenario | Status | Repeats (pass/total) | Latency | Tokens (in/out) | Judge notes |");
+  lines.push("|---|----------|--------|-----------------------|---------|------------------|-------------|");
   for (const g of groups) {
     const tokens = g.tokensIn != null || g.tokensOut != null ? `${g.tokensIn ?? "n/a"} / ${g.tokensOut ?? "n/a"}` : "n/a";
     const judge =
@@ -471,7 +718,9 @@ export function buildMarkdown(run: EvalRun, previous: EvalScenario[] | null): st
         : g.judgeNotes.length > 0
           ? g.judgeNotes.join("; ")
           : "n/a";
-    lines.push(`| ${g.number} | ${g.name} | ${statusBadge(g.status)} | ${formatMs(g.latencyMs)} | ${tokens} | ${judge.replace(/\|/g, "/")} |`);
+    lines.push(
+      `| ${g.number} | ${g.name} | ${statusBadge(g.status)} | ${repeatRatioLabel(g)} | ${formatLatencyCell(g)} | ${tokens} | ${judge.replace(/\|/g, "/")} |`,
+    );
   }
   lines.push("");
   lines.push("## Notes");

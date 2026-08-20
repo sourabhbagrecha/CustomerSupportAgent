@@ -30,9 +30,14 @@ describe("Scenario 12: refund_timeout_after_success reconciles, never double-ref
       });
 
       expect(result.reply).toBeTruthy();
-      // The customer must be told it succeeded, never that it failed.
+      // The customer must be told it succeeded, never that it failed, and
+      // the message must read as plain success: no internal reconciliation
+      // jargon ("duplicate", "reconciled") leaking into customer-facing text,
+      // even though that is exactly what happened under the hood (task P1-7).
       const reply = (result.reply ?? "").toLowerCase();
       expect(reply.includes("fail")).toBe(false);
+      expect(reply.includes("duplicate")).toBe(false);
+      expect(reply.includes("reconciled")).toBe(false);
 
       const ledgerRow = db
         .prepare(`SELECT status, amount FROM actions_ledger WHERE thread_id = ? AND order_id = 'ord_002'`)

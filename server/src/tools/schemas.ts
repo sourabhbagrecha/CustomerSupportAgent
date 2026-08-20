@@ -89,6 +89,14 @@ export const GetConversationHistoryInputSchema = z.object({
 });
 export const SearchPolicyInputSchema = z.object({ query: z.string() });
 
+// Moved above EscalateToHumanInputSchema (which references it via
+// pendingAction) so both the runtime const-initialization order and the
+// z.infer type below stay valid; ActionTypeSchema was previously declared
+// further down, right before MoneyActionResultSchema, where it still logically
+// belongs and is still used.
+export const ActionTypeSchema = z.enum(["refund", "credit"]);
+export type ActionType = z.infer<typeof ActionTypeSchema>;
+
 // customerId and threadId are NEVER model-suppliable for ANY tool: they come
 // from graph state (runtimeState(runtime).customerId), not from tool input.
 // idempotencyKey is NEVER model-suppliable either: it is derived
@@ -97,10 +105,19 @@ export const SearchPolicyInputSchema = z.object({ query: z.string() });
 // implementation verifies that order belongs to the calling customer before
 // answering. This is what makes both the money path and the read path
 // jailbreak-proof regardless of what the model claims.
+// citesPriorPromise (P1-4 hardening): the model must set this true whenever
+// this call's justification rests on the customer's claim that a past agent
+// already promised this outcome (prompt.ts hard rule 6/9). The ledger
+// pipeline (server/src/ledger/pipeline.ts, runMoneyAction) treats this as a
+// deterministic gate: true without an actual get_conversation_history call
+// earlier in the same turn blocks all automatic money on this claim, capped
+// portion included, and denies with a machine-checkable reason instead of
+// trusting the model's unverified paraphrase.
 export const IssueRefundInputSchema = z.object({
   orderId: z.string(),
   amount: z.number().positive(),
   reason: z.string(),
+  citesPriorPromise: z.boolean().optional(),
 });
 export type IssueRefundInput = z.infer<typeof IssueRefundInputSchema>;
 
@@ -108,6 +125,7 @@ export const IssueCreditInputSchema = z.object({
   orderId: z.string().optional(),
   amount: z.number().positive(),
   reason: z.string(),
+  citesPriorPromise: z.boolean().optional(),
 });
 export type IssueCreditInput = z.infer<typeof IssueCreditInputSchema>;
 
@@ -122,11 +140,27 @@ export const EscalationCategorySchema = z.enum([
 ]);
 export type EscalationCategory = z.infer<typeof EscalationCategorySchema>;
 
+// pendingAction (P0-1 hardening): set this when the escalation is about a
+// specific money amount a human still needs to decide on (most commonly the
+// above-cap remainder after a policy-capped portion already auto-issued,
+// prompt.ts hard rule 6). When present, escalate_to_human creates a NEW,
+// dedicated ledger row for exactly this amount (never reusing or pointing at
+// an already-settled row), so the audit card and the eventual grant/uphold
+// decision both act on the right amount. Omit it for escalations with no
+// money action attached (distress, legal threat, a repeated override
+// attempt with nothing new to authorize).
 export const EscalateToHumanInputSchema = z.object({
   reason: z.string(),
   category: EscalationCategorySchema,
   context: z.string(),
   relatedLedgerId: z.number().int().optional(),
+  pendingAction: z
+    .object({
+      actionType: ActionTypeSchema,
+      orderId: z.string().nullable(),
+      amount: z.number().positive(),
+    })
+    .optional(),
 });
 export type EscalateToHumanInput = z.infer<typeof EscalateToHumanInputSchema>;
 
@@ -141,9 +175,6 @@ export const GetConversationHistoryOutputSchema = z.object({
 export const SearchPolicyOutputSchema = z.object({
   chunks: z.array(PolicyChunkHitSchema),
 });
-
-export const ActionTypeSchema = z.enum(["refund", "credit"]);
-export type ActionType = z.infer<typeof ActionTypeSchema>;
 
 const MoneyActionResultBase = {
   ledgerId: z.number().int(),

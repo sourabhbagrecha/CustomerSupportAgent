@@ -9,17 +9,22 @@ export const ChatRequestSchema = z.object({
   message: z.string().min(1),
 });
 
-// A remark is how the customer learns why a request was refused (see
-// server/src/agent/notify.ts), so rejecting or upholding a denial requires
-// one; approving is free to go through without an explanation.
+// P0-3 hardening: the reviewer remark is split into two independent fields.
+// `internalNote` is audit-only (AuditPanel.tsx alone renders it; it is never
+// sent to the customer). `customerNote` is the only field notify.ts ever
+// relays to the customer (behind a profanity backstop), which is how the
+// customer learns why a request was refused, so rejecting or upholding a
+// denial requires a customerNote; approving is free to go through without
+// one. internalNote is always optional on both paths.
 export const ApprovalResolveRequestSchema = z
   .object({
     decision: z.enum(["approve", "reject"]),
-    remark: z.string().trim().max(500).optional(),
+    internalNote: z.string().trim().max(500).optional(),
+    customerNote: z.string().trim().max(500).optional(),
   })
-  .refine((data) => data.decision !== "reject" || (data.remark && data.remark.length > 0), {
-    message: "A remark is required when rejecting or upholding a denial.",
-    path: ["remark"],
+  .refine((data) => data.decision !== "reject" || (data.customerNote && data.customerNote.length > 0), {
+    message: "A customer-facing explanation is required when rejecting or upholding a denial.",
+    path: ["customerNote"],
   });
 
 export const FaultRequestSchema = z.object({

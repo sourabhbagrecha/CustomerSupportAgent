@@ -10,13 +10,20 @@ import {
   compactTimestamp,
   costUsd,
   countJudgeStates,
+  describeJudgeCalibration,
   describeRunCost,
+  findRegressions,
   groupByScenario,
   isValidRunId,
   listScenarioFiles,
+  mergeRepeatGroups,
+  reconcileExpectedScenarios,
+  repeatRatioLabel,
+  repeatSummary,
   runCostUsd,
   slugify,
   type EvalRun,
+  type EvalScenario,
 } from "./runRecord.js";
 
 describe("run ids", () => {
@@ -156,9 +163,16 @@ function sampleRun(): EvalRun {
         notes: ["degraded reply"],
         judgeNotes: [],
         judgeState: null,
+        repeatCount: 1,
+        repeatPassCount: 1,
+        repeatStatuses: ["pass"],
+        latencyMeanMs: 2453,
+        latencySpreadMs: 0,
       },
     ],
     pricing: null,
+    incompleteScenarios: [],
+    judgeCalibration: null,
   };
 }
 
@@ -249,12 +263,186 @@ describe("legacy export", () => {
         notes: [],
         judgeNotes: [],
         judgeState: null,
+        repeatCount: 1,
+        repeatPassCount: 0,
+        repeatStatuses: ["fail"],
+        latencyMeanMs: 1,
+        latencySpreadMs: 0,
       },
     ]);
-    expect(md).toContain("| 14 | all-models-down-degraded | PASS | 2453 ms | n/a | n/a |");
+    expect(md).toContain("| 14 | all-models-down-degraded | PASS | 1/1 | 2453 ms | n/a | n/a |");
     expect(md).toContain("scenario 14: newly passing (was fail)");
     expect(md).toContain("Run id: 20260819T151556Z-sample");
+    expect(md).toContain("Judge calibration: not computed for this run");
     expect(md).not.toContain("sk-");
+  });
+});
+
+function scenario(overrides: Partial<EvalScenario> & Pick<EvalScenario, "number" | "status">): EvalScenario {
+  return {
+    name: `scenario-${overrides.number}`,
+    latencyMs: null,
+    tokensIn: null,
+    tokensOut: null,
+    notes: [],
+    judgeNotes: [],
+    judgeState: null,
+    repeatCount: 1,
+    repeatPassCount: overrides.status === "pass" ? 1 : 0,
+    repeatStatuses: [overrides.status],
+    latencyMeanMs: null,
+    latencySpreadMs: null,
+    ...overrides,
+  };
+}
+
+describe("reconcileExpectedScenarios (denominator discipline)", () => {
+  const expected = [
+    { number: 1, name: "one", file: "01-one.eval.test.ts" },
+    { number: 2, name: "two", file: "02-two.eval.test.ts" },
+    { number: 3, name: "three", file: "03-three.eval.test.ts" },
+  ];
+
+  it("passes through every expected scenario that has a real result", () => {
+    const present = [scenario({ number: 1, status: "pass" }), scenario({ number: 2, status: "fail" }), scenario({ number: 3, status: "pass" })];
+    const { scenarios, missingNumbers } = reconcileExpectedScenarios(present, expected);
+    expect(scenarios.map((s) => s.status)).toEqual(["pass", "fail", "pass"]);
+    expect(missingNumbers).toEqual([]);
+  });
+
+  it("fills a missing expected scenario with a synthetic fail instead of shrinking the denominator", () => {
+    const present = [scenario({ number: 1, status: "pass" }), scenario({ number: 3, status: "pass" })];
+    const { scenarios, missingNumbers } = reconcileExpectedScenarios(present, expected);
+    expect(scenarios).toHaveLength(3);
+    expect(missingNumbers).toEqual([2]);
+    const two = scenarios.find((s) => s.number === 2)!;
+    expect(two.status).toBe("fail");
+    expect(two.repeatStatuses).toEqual(["fail"]);
+    expect(two.notes[0]).toContain("No result was recorded");
+  });
+
+  it("marks every expected scenario as a synthetic fail when nothing ran at all", () => {
+    const { scenarios, missingNumbers } = reconcileExpectedScenarios([], expected);
+    expect(scenarios).toHaveLength(3);
+    expect(missingNumbers).toEqual([1, 2, 3]);
+    expect(scenarios.every((s) => s.status === "fail")).toBe(true);
+  });
+});
+
+describe("repeatSummary / repeatRatioLabel", () => {
+  it("reports N/N for a legacy record with no repeat fields populated, derived from status", () => {
+    const legacyPass = scenario({ number: 1, status: "pass", repeatStatuses: [], repeatPassCount: 0 });
+    expect(repeatSummary(legacyPass)).toEqual({ count: 1, passCount: 1, statuses: ["pass"] });
+    expect(repeatRatioLabel(legacyPass)).toBe("1/1");
+
+    const legacyFail = scenario({ number: 2, status: "fail", repeatStatuses: [], repeatPassCount: 0 });
+    expect(repeatSummary(legacyFail)).toEqual({ count: 1, passCount: 0, statuses: ["fail"] });
+    expect(repeatRatioLabel(legacyFail)).toBe("0/1");
+  });
+
+  it("reports the real ratio once repeat fields are populated", () => {
+    const repeated = scenario({
+      number: 1,
+      status: "fail",
+      repeatCount: 3,
+      repeatPassCount: 2,
+      repeatStatuses: ["pass", "pass", "fail"],
+    });
+    expect(repeatRatioLabel(repeated)).toBe("2/3");
+  });
+});
+
+describe("mergeRepeatGroups", () => {
+  it("is an identity for a single repeat, filling repeat fields from status", () => {
+    const group = [scenario({ number: 1, status: "pass", latencyMs: 500 })];
+    const merged = mergeRepeatGroups([group]);
+    expect(merged[0]!.repeatCount).toBe(1);
+    expect(merged[0]!.repeatPassCount).toBe(1);
+    expect(merged[0]!.latencyMeanMs).toBe(500);
+    expect(merged[0]!.latencySpreadMs).toBe(0);
+  });
+
+  it("combines repeats: fails overall if any repeat failed, reports the pass ratio and latency spread", () => {
+    const run1 = [scenario({ number: 1, status: "pass", latencyMs: 1000 })];
+    const run2 = [scenario({ number: 1, status: "pass", latencyMs: 2000 })];
+    const run3 = [scenario({ number: 1, status: "fail", latencyMs: 3000, notes: ["assertion failed"] })];
+    const merged = mergeRepeatGroups([run1, run2, run3]);
+    expect(merged).toHaveLength(1);
+    const s = merged[0]!;
+    expect(s.status).toBe("fail");
+    expect(s.repeatCount).toBe(3);
+    expect(s.repeatPassCount).toBe(2);
+    expect(s.repeatStatuses).toEqual(["pass", "pass", "fail"]);
+    expect(s.latencyMeanMs).toBe(2000);
+    expect(s.latencySpreadMs).toBe(2000);
+    expect(s.notes).toEqual(["[run 3] assertion failed"]);
+  });
+
+  it("passes overall only when every repeat passed", () => {
+    const allPass = mergeRepeatGroups([
+      [scenario({ number: 1, status: "pass" })],
+      [scenario({ number: 1, status: "pass" })],
+    ]);
+    expect(allPass[0]!.status).toBe("pass");
+    expect(allPass[0]!.repeatPassCount).toBe(2);
+  });
+});
+
+describe("findRegressions (CI gate)", () => {
+  it("flags a baseline-passing scenario that now fails, naming it", () => {
+    const baseline = [scenario({ number: 1, status: "pass", name: "policy-cap" }), scenario({ number: 2, status: "fail" })];
+    const current = [scenario({ number: 1, status: "fail", name: "policy-cap" }), scenario({ number: 2, status: "pass" })];
+    const regressions = findRegressions(baseline, current);
+    expect(regressions).toEqual([{ number: 1, name: "policy-cap", previousStatus: "pass", currentStatus: "fail" }]);
+  });
+
+  it("simulates a deliberately-broken policy cap: a previously-passing cap scenario regressing is the exact acceptance case for evals:gate", () => {
+    // Stand-in for "monkeypatch a cap value and rerun": the deterministic
+    // effect of a broken cap is that a scenario asserting the capped amount
+    // (e.g. scenario 6/7/20's INR 500 cap check) flips from pass to fail.
+    // Exercising that transition here proves findRegressions (the core of
+    // `npm run evals:gate`) reports it correctly and by name, without an
+    // actual paid run or touching the real policy engine/fixtures.
+    const baseline = [scenario({ number: 6, status: "pass", name: "prior-promise-vs-cap" })];
+    const brokenCapRun = [scenario({ number: 6, status: "fail", name: "prior-promise-vs-cap", notes: ["expected amount 500, got 1000"] })];
+    const regressions = findRegressions(baseline, brokenCapRun);
+    expect(regressions).toHaveLength(1);
+    expect(regressions[0]!.number).toBe(6);
+    expect(regressions[0]!.name).toBe("prior-promise-vs-cap");
+  });
+
+  it("treats a scenario missing entirely from the current run as a regression, never a silent skip", () => {
+    const baseline = [scenario({ number: 1, status: "pass" })];
+    const regressions = findRegressions(baseline, []);
+    expect(regressions).toEqual([{ number: 1, name: "scenario-1", previousStatus: "pass", currentStatus: "fail" }]);
+  });
+
+  it("never flags a baseline scenario that was already failing, or a new scenario with no baseline", () => {
+    const baseline = [scenario({ number: 1, status: "fail" })];
+    const current = [scenario({ number: 1, status: "fail" }), scenario({ number: 2, status: "fail" })];
+    expect(findRegressions(baseline, current)).toEqual([]);
+  });
+});
+
+describe("describeJudgeCalibration", () => {
+  it("reports agreement percentage and marks the golden set as drafted/pending review", () => {
+    const text = describeJudgeCalibration({
+      goldenSetVersion: "v1",
+      computedAt: "2026-08-20T00:00:00.000Z",
+      total: 12,
+      agreeing: 10,
+      agreementPct: (10 / 12) * 100,
+      judgeModel: "gpt-5.4-mini",
+      disagreements: [],
+    });
+    expect(text).toContain("10/12");
+    expect(text).toContain("83%");
+    expect(text).toContain("drafted/ASSUMED, pending human review");
+    expect(text).toContain("gpt-5.4-mini");
+  });
+
+  it("reports absence plainly when not computed", () => {
+    expect(describeJudgeCalibration(null)).toBe("not computed for this run (only computed for a full-suite run)");
   });
 });
 

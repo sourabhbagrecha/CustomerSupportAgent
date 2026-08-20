@@ -38,30 +38,53 @@ describe("LedgerQuerySchema", () => {
 });
 
 describe("ApprovalResolveRequestSchema", () => {
-  it("accepts an approve decision with no remark", () => {
+  it("accepts an approve decision with no notes at all", () => {
     expect(ApprovalResolveRequestSchema.safeParse({ decision: "approve" }).success).toBe(true);
   });
 
-  it("accepts an approve decision with a remark", () => {
-    const parsed = ApprovalResolveRequestSchema.safeParse({ decision: "approve", remark: "Goodwill exception." });
+  it("accepts an approve decision with an internal note only", () => {
+    const parsed = ApprovalResolveRequestSchema.safeParse({ decision: "approve", internalNote: "Goodwill exception." });
     expect(parsed.success).toBe(true);
   });
 
-  it("rejects a reject decision with no remark", () => {
+  it("rejects a reject decision with no customer-facing note", () => {
     expect(ApprovalResolveRequestSchema.safeParse({ decision: "reject" }).success).toBe(false);
   });
 
-  it("rejects a reject decision with a whitespace-only remark", () => {
-    expect(ApprovalResolveRequestSchema.safeParse({ decision: "reject", remark: "   " }).success).toBe(false);
+  it("rejects a reject decision with an internal note but no customer-facing note", () => {
+    expect(
+      ApprovalResolveRequestSchema.safeParse({ decision: "reject", internalNote: "Staff-only reasoning." }).success,
+    ).toBe(false);
   });
 
-  it("accepts a reject decision with a real remark", () => {
-    const parsed = ApprovalResolveRequestSchema.safeParse({ decision: "reject", remark: "Order was never delivered." });
+  it("rejects a reject decision with a whitespace-only customer-facing note", () => {
+    expect(ApprovalResolveRequestSchema.safeParse({ decision: "reject", customerNote: "   " }).success).toBe(false);
+  });
+
+  it("accepts a reject decision with a real customer-facing note", () => {
+    const parsed = ApprovalResolveRequestSchema.safeParse({
+      decision: "reject",
+      customerNote: "Order was never delivered.",
+    });
     expect(parsed.success).toBe(true);
   });
 
-  it("rejects a remark over the length bound", () => {
-    const parsed = ApprovalResolveRequestSchema.safeParse({ decision: "approve", remark: "x".repeat(501) });
+  it("accepts a reject decision with both an internal note and a customer-facing note", () => {
+    const parsed = ApprovalResolveRequestSchema.safeParse({
+      decision: "reject",
+      internalNote: "Reviewer's private reasoning.",
+      customerNote: "Order was never delivered.",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects a customer-facing note over the length bound", () => {
+    const parsed = ApprovalResolveRequestSchema.safeParse({ decision: "approve", customerNote: "x".repeat(501) });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects an internal note over the length bound", () => {
+    const parsed = ApprovalResolveRequestSchema.safeParse({ decision: "approve", internalNote: "x".repeat(501) });
     expect(parsed.success).toBe(false);
   });
 });

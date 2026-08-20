@@ -18,7 +18,13 @@ export interface ApprovalRow {
   denialReason: string | null;
   category: string | null;
   context: string | null;
+  // P0-3: `remark` is the reviewer's INTERNAL note, audit-only, rendered
+  // only in AuditPanel.tsx and never sent to the customer. `customerNote` is
+  // the separate, optional customer-facing explanation notify.ts actually
+  // relays (after a wordlist profanity backstop). The two must never be
+  // conflated again.
   remark: string | null;
+  customerNote: string | null;
   status: ApprovalStatus;
   createdAt: string;
   resolvedAt: string | null;
@@ -40,6 +46,7 @@ interface ApprovalRowSql {
   category: string | null;
   context: string | null;
   remark: string | null;
+  customer_note: string | null;
   status: ApprovalStatus;
   created_at: string;
   resolved_at: string | null;
@@ -62,6 +69,7 @@ function fromSql(row: ApprovalRowSql): ApprovalRow {
     category: row.category,
     context: row.context,
     remark: row.remark,
+    customerNote: row.customer_note,
     status: row.status,
     createdAt: row.created_at,
     resolvedAt: row.resolved_at,
@@ -140,17 +148,19 @@ export function resolveApproval(
   status: "approved" | "rejected",
   remark: string | null = null,
   resolvedBy: string = "human_agent",
+  customerNote: string | null = null,
 ): ApprovalRow | undefined {
   const resolvedAt = new Date().toISOString();
   const info = db
     .prepare(
-      `UPDATE approvals SET status = @status, remark = @remark, resolved_at = @resolvedAt, resolved_by = @resolvedBy
+      `UPDATE approvals SET status = @status, remark = @remark, customer_note = @customerNote, resolved_at = @resolvedAt, resolved_by = @resolvedBy
         WHERE id = @id AND status = 'pending'`,
     )
     .run({
       id,
       status,
       remark,
+      customerNote,
       resolvedAt,
       resolvedBy,
     });
@@ -177,6 +187,7 @@ export interface ResolveApprovalWithDecisionEventInput {
   approvalId: number;
   status: "approved" | "rejected";
   remark: string | null;
+  customerNote?: string | null;
   resolvedBy?: string;
   threadId: string;
   kind: ApprovalKind;
@@ -194,7 +205,7 @@ export function resolveApprovalWithDecisionEvent(
   input: ResolveApprovalWithDecisionEventInput,
 ): ApprovalRow | undefined {
   const run = db.transaction(() => {
-    const row = resolveApproval(db, input.approvalId, input.status, input.remark, input.resolvedBy);
+    const row = resolveApproval(db, input.approvalId, input.status, input.remark, input.resolvedBy, input.customerNote ?? null);
     if (!row) return undefined;
     emitEvent(db, {
       threadId: input.threadId,
@@ -204,7 +215,8 @@ export function resolveApprovalWithDecisionEvent(
         approvalId: input.approvalId,
         kind: input.kind,
         decision: input.decision,
-        remark: input.remark,
+        internalNote: input.remark,
+        customerNote: input.customerNote ?? null,
       },
     });
     return row;

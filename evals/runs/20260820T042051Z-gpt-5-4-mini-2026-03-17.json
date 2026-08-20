@@ -1,17 +1,29 @@
 {
-  "generatedAt": "2026-08-20T04:22:45.168Z",
-  "metadata": {
+  "schemaVersion": 1,
+  "runId": "20260820T042051Z-gpt-5-4-mini-2026-03-17",
+  "label": "gpt-5.4-mini-2026-03-17",
+  "source": "cli",
+  "status": "completed",
+  "startedAt": "2026-08-20T04:20:51.960Z",
+  "finishedAt": "2026-08-20T04:22:45.168Z",
+  "durationMs": 113208,
+  "exitCode": 1,
+  "failureReason": null,
+  "provider": {
+    "baseUrl": "https://api.openai.com/v1",
     "primaryModel": "gpt-5.4-mini-2026-03-17",
     "fallbackModel": "google/gemini-3.7-flash",
-    "gitCommit": "908ee8a07f2cc753035fac26d814f74e587260cb",
-    "runCount": 1,
-    "judgeStates": {
-      "scored": 7,
-      "unscored": 0,
-      "notApplicable": 15
-    },
-    "promptSha256": "3d44b9e4f63191ac1304ae8685cdc277b04918fe7865242b9df41b0f367814ac",
-    "fixturesSha256": "9b890d19faf0bfadc4264f1b4b3cd586fcfdf6c22eaa22fadf87dcf3cda4b7a3"
+    "judgeModel": "gpt-5.4-mini-2026-03-17",
+    "judgeBaseUrl": "https://api.openai.com/v1"
+  },
+  "scenarioFilter": null,
+  "gitCommit": "908ee8a07f2cc753035fac26d814f74e587260cb",
+  "promptSha256": "3d44b9e4f63191ac1304ae8685cdc277b04918fe7865242b9df41b0f367814ac",
+  "fixturesSha256": "9b890d19faf0bfadc4264f1b4b3cd586fcfdf6c22eaa22fadf87dcf3cda4b7a3",
+  "judgeStates": {
+    "scored": 7,
+    "unscored": 0,
+    "notApplicable": 15
   },
   "scenarios": [
     {
@@ -469,5 +481,22 @@
       "latencyMeanMs": 5882,
       "latencySpreadMs": 0
     }
-  ]
+  ],
+  "pricing": {
+    "source": "openrouter",
+    "openrouterModelId": "openai/gpt-5.4-mini",
+    "promptUsdPerMillion": 0.75,
+    "completionUsdPerMillion": 4.5,
+    "fetchedAt": "2026-08-20T04:20:52.170Z"
+  },
+  "incompleteScenarios": [],
+  "judgeCalibration": {
+    "goldenSetVersion": "v1-drafted-2026-08-20",
+    "computedAt": "2026-08-20T04:21:04.365Z",
+    "total": 12,
+    "agreeing": 12,
+    "agreementPct": 100,
+    "judgeModel": "gpt-5.4-mini-2026-03-17",
+    "disagreements": []
+  }
 }

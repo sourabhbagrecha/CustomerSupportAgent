@@ -14,6 +14,7 @@ import { appendDecisionNotice, buildDecisionNotice } from "./agent/notify.js";
 import { runTurn, resumeApprovalTurn, type RunTurnResult } from "./agent/runTurn.js";
 import type { AgentState } from "./agent/state.js";
 import { getDb } from "./db/client.js";
+import { resetDemoData } from "./db/resetDemo.js";
 import { emitEvent, listEventsForThread, subscribe, subscribeStream } from "./events/emitter.js";
 import {
   BASE_URL_PRESETS,
@@ -60,6 +61,19 @@ if (existsSync(WEB_DIST)) {
 }
 
 app.get("/api/health", async () => ({ ok: true }));
+
+// Restores seed customers/orders/payments/policies from /fixtures and clears
+// all runtime demo state (ledger, approvals/escalations, events, threads,
+// faults); leaves evals/runs/ untouched. See server/src/db/resetDemo.ts. The
+// frontend reset button that calls this route is owned by another group.
+app.post("/api/demo/reset", async (request, reply) => {
+  try {
+    return resetDemoData();
+  } catch (err) {
+    request.log.error(err);
+    return reply.code(500).send({ error: "Failed to reset demo data." });
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Eval runs (plan 007). The archive under evals/runs/ is read-only here
@@ -323,10 +337,15 @@ async function executeApprovalDecision(params: {
   graph: AgentGraph;
   approval: ApprovalRow;
   decision: "approve" | "reject";
-  remarkText: string | null;
+  // P0-3: internalNote is audit-only (feeds the ledger row's `reason`, never
+  // sent to the customer); customerNote is the only field notify.ts ever
+  // relays to the customer. The two travel separately end to end.
+  internalNote: string | null;
+  customerNote: string | null;
   threadId: string;
 }): Promise<RunTurnResult> {
-  const { db: database, graph: agentGraph, approval, decision, remarkText, threadId } = params;
+  const { db: database, graph: agentGraph, approval, decision, internalNote, customerNote, threadId } = params;
+  const resolvedBy = approval.resolvedBy ?? "human_agent";
   let result: RunTurnResult;
 
   if (approval.kind === "policy_approval") {
@@ -334,15 +353,17 @@ async function executeApprovalDecision(params: {
     if (isGraphPausedAtInterrupt(snapshot)) {
       // The graph is paused at an issue_refund/issue_credit interrupt();
       // resuming it lets the agent's own turn finish (it may still need to
-      // say more to the customer), and the remark travels with the resume
-      // so it lands in the ledger row's reason (see agentTools.ts).
+      // say more to the customer). internalNote travels with the resume so
+      // it lands in the ledger row's reason (see agentTools.ts); customerNote
+      // travels separately for the deterministic notice below.
       result = await resumeApprovalTurn({
         db: database,
         graph: agentGraph,
         threadId,
         customerId: approval.customerId,
         decision,
-        remark: remarkText,
+        internalNote,
+        customerNote,
       });
     } else {
       // No pending interrupt: the resume already ran to completion on an
@@ -351,12 +372,12 @@ async function executeApprovalDecision(params: {
       // row's own terminal state instead of invoking the graph again.
       const ledgerRow = approval.ledgerId ? getLedgerById(database, approval.ledgerId) : undefined;
       const moneyResult = ledgerRow ? mapRowToResult(ledgerRow) : null;
-      const notice = buildDecisionNotice({ approval, decision, moneyResult, remark: remarkText });
+      const notice = buildDecisionNotice({ approval, decision, moneyResult, customerNote });
       result = { reply: notice, status: "resolved", degraded: false };
     }
-    if (remarkText) {
+    if (customerNote) {
       const moneyResult = approval.ledgerId ? mapRowToResult(getLedgerById(database, approval.ledgerId)!) : null;
-      const notice = buildDecisionNotice({ approval, decision, moneyResult, remark: remarkText });
+      const notice = buildDecisionNotice({ approval, decision, moneyResult, customerNote });
       await appendDecisionNotice(database, agentGraph, threadId, notice);
     }
   } else {
@@ -364,18 +385,21 @@ async function executeApprovalDecision(params: {
     // this got reviewed, so there is no interrupt() to resume. Act on the
     // ledger row directly (same idempotency key, first real external call
     // either way, per pipeline.ts) and notify the customer out of band. Safe
-    // to re-run on a retry: re-denying is harmless, and a re-approval reuses
-    // the ledger row's existing idempotency key so money cannot move twice.
+    // to re-run on a retry: re-denying is harmless, and resolveApprovedAction
+    // / resolveRejectedAction's append-only guard means a re-approval is a
+    // no-op returning the already-settled outcome unchanged, so money cannot
+    // move twice. `isOverride: true` on approve records who authorized
+    // bypassing the policy engine (override_by on the ledger row).
     let moneyResult: MoneyActionResult | null = null;
     if (approval.ledgerId) {
       const ledgerRow = getLedgerById(database, approval.ledgerId);
       if (!ledgerRow) throw new Error(`Ledger row ${approval.ledgerId} referenced by approval ${approval.id} not found.`);
       moneyResult =
         decision === "approve"
-          ? await resolveApprovedAction(database, ledgerRow, remarkText, "Exception granted by human reviewer")
-          : resolveRejectedAction(database, ledgerRow, remarkText, "Denial upheld by human reviewer");
+          ? await resolveApprovedAction(database, ledgerRow, internalNote, "Exception granted by human reviewer", resolvedBy, true)
+          : resolveRejectedAction(database, ledgerRow, internalNote, "Denial upheld by human reviewer", resolvedBy);
     }
-    const notice = buildDecisionNotice({ approval, decision, moneyResult, remark: remarkText });
+    const notice = buildDecisionNotice({ approval, decision, moneyResult, customerNote });
     await appendDecisionNotice(database, agentGraph, threadId, notice);
     result = { reply: notice, status: "resolved", degraded: false };
   }
@@ -404,8 +428,9 @@ app.post<{ Params: { threadId: string; approvalId: string }; Body: unknown }>(
       return reply.code(404).send({ error: "Approval not found for this thread." });
     }
 
-    const { decision, remark } = parsed.data;
-    const remarkText = remark && remark.length > 0 ? remark : null;
+    const { decision, internalNote, customerNote } = parsed.data;
+    const internalNoteText = internalNote && internalNote.length > 0 ? internalNote : null;
+    const customerNoteText = customerNote && customerNote.length > 0 ? customerNote : null;
     const threadId = request.params.threadId;
 
     try {
@@ -444,7 +469,8 @@ app.post<{ Params: { threadId: string; approvalId: string }; Body: unknown }>(
         const resolved = resolveApprovalWithDecisionEvent(db, {
           approvalId,
           status: decision === "approve" ? "approved" : "rejected",
-          remark: remarkText,
+          remark: internalNoteText,
+          customerNote: customerNoteText,
           threadId,
           kind: approval.kind,
           decision,
@@ -455,7 +481,15 @@ app.post<{ Params: { threadId: string; approvalId: string }; Body: unknown }>(
         resolvedApproval = resolved;
       }
 
-      return await executeApprovalDecision({ db, graph, approval: resolvedApproval, decision, remarkText, threadId });
+      return await executeApprovalDecision({
+        db,
+        graph,
+        approval: resolvedApproval,
+        decision,
+        internalNote: internalNoteText,
+        customerNote: customerNoteText,
+        threadId,
+      });
     } catch (err) {
       request.log.error(err);
       emitEvent(db, {

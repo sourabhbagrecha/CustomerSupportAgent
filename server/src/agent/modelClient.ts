@@ -5,7 +5,7 @@ import type Database from "better-sqlite3";
 import { consumeFault, isFaultActive } from "../faults/registry.js";
 import { emitEvent, publishStreamEvent } from "../events/emitter.js";
 import { ModelsUnavailable } from "./errors.js";
-import { resolveAgentProvider } from "./providerConfig.js";
+import { resolveAgentProvider, resolveModelEndpoint } from "./providerConfig.js";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_RETRIES_PER_MODEL = 2; // up to 2 retries (3 attempts total) before failing over
@@ -49,18 +49,23 @@ function checkModelFault(role: "primary" | "fallback"): void {
 
 // Endpoint and key come from providerConfig (OPENAI_API_KEY, optional
 // OPENAI_BASE_URL), so any OpenAI-compatible chat-completions provider can
-// stand in without a code change. The baseURL is always passed explicitly
-// rather than left to the SDK's own env lookup, so what the trace records
-// and what the request hits are resolved in one place.
+// stand in without a code change. resolveModelEndpoint additionally routes
+// an OpenRouter-style model id (e.g. "google/gemini-3.7-flash", used for
+// FALLBACK_MODEL) to OpenRouter's endpoint and key regardless of
+// OPENAI_BASE_URL, so primary and fallback can each hit a genuinely
+// different provider. The baseURL is always passed explicitly rather than
+// left to the SDK's own env lookup, so what the trace records and what the
+// request hits are resolved in one place.
 function buildClient(model: string): ChatOpenAI {
   const provider = resolveAgentProvider();
+  const endpoint = resolveModelEndpoint(provider, model);
   return new ChatOpenAI({
     model,
     temperature: 0,
     timeout: REQUEST_TIMEOUT_MS,
     maxRetries: 0, // retry/backoff is owned by this wrapper, not the SDK
-    apiKey: provider.apiKey,
-    configuration: { baseURL: provider.baseUrl },
+    apiKey: endpoint.apiKey,
+    configuration: { baseURL: endpoint.baseUrl },
     streamUsage: true, // keep tokensIn/tokensOut populated on the streamed result
   });
 }
@@ -115,6 +120,7 @@ async function callWithRetry({ role, model, messages, tools, threadId, db }: Cal
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= MAX_RETRIES_PER_MODEL; attempt++) {
+    const attemptNumber = attempt + 1; // 1-indexed for the trace: "attempt 1", not "attempt 0"
     const startedAt = Date.now();
     try {
       checkModelFault(role);
@@ -130,10 +136,17 @@ async function callWithRetry({ role, model, messages, tools, threadId, db }: Cal
       if (!accumulated) throw new Error("Model stream produced no chunks.");
       assertValidAIMessageShape(accumulated);
       const result = accumulated as unknown as AIMessage;
+      // Cached-prefix input tokens as reported by the provider
+      // (prompt_tokens_details.cached_tokens on OpenAI-compatible APIs,
+      // mapped by LangChain to input_token_details.cache_read). Recorded in
+      // the payload, not a new column, so old events and the schema are
+      // untouched; null means the provider reported nothing, 0 means a
+      // reported cache miss.
+      const cacheReadTokens = result.usage_metadata?.input_token_details?.cache_read ?? null;
       emitEvent(db, {
         threadId,
         type: "llm_call",
-        payload: { role, model, attempt },
+        payload: { role, model, attempt: attemptNumber, cacheReadTokens },
         latencyMs: Date.now() - startedAt,
         tokensIn: result.usage_metadata?.input_tokens ?? null,
         tokensOut: result.usage_metadata?.output_tokens ?? null,
@@ -142,6 +155,11 @@ async function callWithRetry({ role, model, messages, tools, threadId, db }: Cal
       return result;
     } catch (err) {
       lastError = err;
+      const retryable = isRetryableStatus(err);
+      const willRetry = retryable && attempt < MAX_RETRIES_PER_MODEL;
+      // Computed once so the event payload reports the exact delay actually
+      // slept, jitter included, rather than a value that could drift from it.
+      const waitMs = willRetry ? Math.round(backoffMs(attempt)) : null;
       emitEvent(db, {
         threadId,
         type: "error",
@@ -149,15 +167,17 @@ async function callWithRetry({ role, model, messages, tools, threadId, db }: Cal
           stage: "llm_call",
           role,
           model,
-          attempt,
-          retryable: isRetryableStatus(err),
+          attempt: attemptNumber,
+          retryable,
+          willRetry,
+          waitMs,
           message: err instanceof Error ? err.message : String(err),
         },
         latencyMs: Date.now() - startedAt,
         model,
       });
-      if (!isRetryableStatus(err) || attempt === MAX_RETRIES_PER_MODEL) break;
-      await sleep(backoffMs(attempt));
+      if (!willRetry) break;
+      await sleep(waitMs!);
     }
   }
   throw lastError;

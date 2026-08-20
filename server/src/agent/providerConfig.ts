@@ -23,6 +23,7 @@ export interface AgentProviderConfig {
   baseUrl: string;
   primaryModel: string | undefined;
   fallbackModel: string | undefined;
+  openRouterApiKey: string | undefined;
 }
 
 export interface JudgeProviderConfig {
@@ -58,7 +59,36 @@ export function resolveAgentProvider(env: Env = process.env): AgentProviderConfi
     baseUrl: normalizeBaseUrl(env.OPENAI_BASE_URL),
     primaryModel: env.PRIMARY_MODEL,
     fallbackModel: env.FALLBACK_MODEL,
+    openRouterApiKey: env.OPENROUTER_API_KEY,
   };
+}
+
+// OpenRouter names models "vendor/model" (e.g. "google/gemini-3.7-flash");
+// an OpenAI-style id (e.g. "gpt-5.4-mini") never contains "/". This is what
+// lets FALLBACK_MODEL name a genuinely different provider/family than
+// PRIMARY_MODEL for real failover (see .env.example), not just a cheaper
+// model from the same vendor that goes down with it.
+export function isOpenRouterModelId(modelId: string): boolean {
+  return modelId.includes("/");
+}
+
+export interface ModelEndpoint {
+  apiKey: string | undefined;
+  baseUrl: string;
+}
+
+// Per-call routing: an OpenRouter-style model id always goes to
+// OPENROUTER_BASE_URL with OPENROUTER_API_KEY, regardless of OPENAI_BASE_URL;
+// every other id keeps using the agent's own configured endpoint and key
+// exactly as before. Called once per model (primary, then fallback if it
+// differs), so PRIMARY_MODEL and FALLBACK_MODEL can each be routed to a
+// different provider without a second OPENAI_BASE_URL to configure, and
+// without adding a queue, proxy, or any second process.
+export function resolveModelEndpoint(provider: AgentProviderConfig, modelId: string): ModelEndpoint {
+  if (isOpenRouterModelId(modelId) && provider.baseUrl !== OPENROUTER_BASE_URL) {
+    return { apiKey: provider.openRouterApiKey, baseUrl: OPENROUTER_BASE_URL };
+  }
+  return { apiKey: provider.apiKey, baseUrl: provider.baseUrl };
 }
 
 // JUDGE_* overrides fall back to the agent's own settings, which is exactly

@@ -31,6 +31,15 @@ export interface LedgerRow {
   createdAt: string;
   resolvedAt: string | null;
   rawResponse: string | null;
+  // Human-resolution metadata (P0-1 hardening). See schema.sql's comment on
+  // actions_ledger: `resolution` is set exactly once, the first time a human
+  // resolves this row, and its presence is what pipeline.ts's
+  // resolveApprovedAction/resolveRejectedAction check before ever acting on
+  // or overwriting an already-settled row again.
+  resolution: "approved" | "rejected" | null;
+  resolvedBy: string | null;
+  resolutionRemark: string | null;
+  overrideBy: string | null;
 }
 
 interface LedgerRowSql {
@@ -47,6 +56,10 @@ interface LedgerRowSql {
   created_at: string;
   resolved_at: string | null;
   raw_response: string | null;
+  resolution: "approved" | "rejected" | null;
+  resolved_by: string | null;
+  resolution_remark: string | null;
+  override_by: string | null;
 }
 
 function fromSql(row: LedgerRowSql): LedgerRow {
@@ -64,6 +77,10 @@ function fromSql(row: LedgerRowSql): LedgerRow {
     createdAt: row.created_at,
     resolvedAt: row.resolved_at,
     rawResponse: row.raw_response,
+    resolution: row.resolution,
+    resolvedBy: row.resolved_by,
+    resolutionRemark: row.resolution_remark,
+    overrideBy: row.override_by,
   };
 }
 

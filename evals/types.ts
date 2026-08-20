@@ -29,4 +29,10 @@ export interface ScenarioRecord {
   judge?: JudgeVerdict | null;
   judgeState: JudgeState;
   note: string;
+  // Which repeat pass (1-based) wrote this record, when the scenario suite
+  // is run more than once per scenario (task P1-6 "repeats", see
+  // EVAL_REPEAT_INDEX in evals/harness.ts and server/src/evals/runner.ts).
+  // Absent/1 for a normal single run, so every artifact written before this
+  // existed still reads the same way.
+  repeatIndex?: number;
 }

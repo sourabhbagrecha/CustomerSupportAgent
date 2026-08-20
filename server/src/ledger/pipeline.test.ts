@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type Database from "better-sqlite3";
 import { openDb, applySchema } from "../db/client.js";
+import { emitEvent } from "../events/emitter.js";
 import { clearAllFaults, setFault } from "../faults/registry.js";
 import type { PolicyDocument } from "../policy/schemas.js";
 import { issueRefundRaw } from "../tools/mockApi.js";
 import { getPendingApprovalForThread } from "./approvals.js";
-import { resolveApprovedAction, resolveRejectedAction, runMoneyAction } from "./pipeline.js";
+import { createEscalationLedgerRow, resolveApprovedAction, resolveRejectedAction, runMoneyAction } from "./pipeline.js";
 
 // Phase 3 (docs/plans/005) provider-response-validation coverage needs a way
 // to make the raw mock provider return a malformed shape without a
@@ -257,6 +258,10 @@ describe("runMoneyAction", () => {
       createdAt: ledgerRow.created_at,
       resolvedAt: ledgerRow.resolved_at,
       rawResponse: ledgerRow.raw_response,
+      resolution: null,
+      resolvedBy: null,
+      resolutionRemark: null,
+      overrideBy: null,
     });
     expect(resolved.status).toBe("succeeded");
     expect(countPayments(db, "o6", "refund")).toBe(1);
@@ -327,6 +332,10 @@ describe("runMoneyAction", () => {
       createdAt: new Date().toISOString(),
       resolvedAt: null,
       rawResponse: null,
+      resolution: null,
+      resolvedBy: null,
+      resolutionRemark: null,
+      overrideBy: null,
     };
     db.prepare(
       `INSERT INTO actions_ledger (id, idempotency_key, thread_id, action_type, customer_id, order_id, amount, currency, status, reason, created_at)
@@ -371,6 +380,10 @@ describe("human exception review on a denied row", () => {
         createdAt: new Date().toISOString(),
         resolvedAt: null,
         rawResponse: null,
+        resolution: null,
+        resolvedBy: null,
+        resolutionRemark: null,
+        overrideBy: null,
       },
       "Customer provided proof of delivery over the phone",
       "Exception granted by human reviewer",
@@ -418,6 +431,10 @@ describe("human exception review on a denied row", () => {
         createdAt: new Date().toISOString(),
         resolvedAt: null,
         rawResponse: null,
+        resolution: null,
+        resolvedBy: null,
+        resolutionRemark: null,
+        overrideBy: null,
       },
       "Policy is correct here, order was never delivered",
       "Denial upheld by human reviewer",
@@ -427,5 +444,230 @@ describe("human exception review on a denied row", () => {
     expect(countPayments(db, "o9", "refund")).toBe(0);
     const after = db.prepare(`SELECT reason FROM actions_ledger WHERE thread_id = 't9'`).get() as { reason: string };
     expect(after.reason).toBe("Denial upheld by human reviewer: Policy is correct here, order was never delivered");
+  });
+});
+
+describe("createEscalationLedgerRow (P0-1)", () => {
+  it("creates an awaiting_approval row with its own idempotency key, distinct from a real issue call for the same thread/action/order/amount", async () => {
+    seedOrder(db, "o13", 2000);
+    // The capped portion actually succeeding first, mirroring prompt.ts rule 6.
+    const capped = await runMoneyAction(db, POLICY, {
+      threadId: "t13",
+      customerId: "c1",
+      actionType: "refund",
+      orderId: "o13",
+      amount: 500,
+      reason: "capped portion",
+    });
+    expect(capped.status).toBe("succeeded");
+
+    const escalationRow = createEscalationLedgerRow(db, {
+      threadId: "t13",
+      customerId: "c1",
+      actionType: "refund",
+      orderId: "o13",
+      amount: 1500,
+      reason: "Prior promise exceeds the auto-refund cap; escalating the INR 1500 gap.",
+    });
+
+    expect(escalationRow.status).toBe("awaiting_approval");
+    expect(escalationRow.amount).toBe(1500);
+    expect(escalationRow.id).not.toBe(capped.status === "succeeded" ? capped.ledgerId : -1);
+
+    const rows = db.prepare(`SELECT id, status, amount FROM actions_ledger WHERE thread_id = 't13'`).all() as Array<{
+      id: number;
+      status: string;
+      amount: number;
+    }>;
+    expect(rows).toHaveLength(2);
+
+    // Granting the escalation moves exactly the delta, and never touches the
+    // already-succeeded capped row.
+    const granted = await resolveApprovedAction(db, escalationRow, "Customer provided proof", "Exception granted by human reviewer", "reviewer_1", true);
+    expect(granted.status).toBe("succeeded");
+    if (granted.status === "succeeded") expect(granted.amount).toBe(1500);
+    expect(countPayments(db, "o13", "refund")).toBe(2);
+
+    const cappedRowAfter = db.prepare(`SELECT reason, status FROM actions_ledger WHERE id = ?`).get(
+      capped.status === "succeeded" ? capped.ledgerId : -1,
+    ) as { reason: string; status: string };
+    expect(cappedRowAfter.status).toBe("succeeded");
+    expect(cappedRowAfter.reason).not.toContain("Exception granted");
+
+    const escalationRowAfter = db.prepare(`SELECT override_by, resolution FROM actions_ledger WHERE id = ?`).get(
+      escalationRow.id,
+    ) as { override_by: string | null; resolution: string | null };
+    expect(escalationRowAfter.resolution).toBe("approved");
+    expect(escalationRowAfter.override_by).toBe("reviewer_1");
+  });
+});
+
+describe("append-only guard on human-resolved rows (P0-1)", () => {
+  it("granting the same escalation row twice issues money exactly once and leaves the reason untouched the second time", async () => {
+    seedOrder(db, "o14", 2000);
+    const row = createEscalationLedgerRow(db, {
+      threadId: "t14",
+      customerId: "c1",
+      actionType: "refund",
+      orderId: "o14",
+      amount: 1500,
+      reason: "Escalated for human review.",
+    });
+
+    const first = await resolveApprovedAction(db, row, "First grant", "Exception granted by human reviewer", "reviewer_1", true);
+    expect(first.status).toBe("succeeded");
+    expect(countPayments(db, "o14", "refund")).toBe(1);
+
+    const settled = db.prepare(`SELECT * FROM actions_ledger WHERE id = ?`).get(row.id) as {
+      id: number;
+      idempotency_key: string;
+      thread_id: string;
+      action_type: "refund" | "credit";
+      customer_id: string;
+      order_id: string | null;
+      amount: number;
+      currency: string;
+      status: "pending" | "succeeded" | "failed" | "failed_unknown" | "reconciled" | "denied" | "awaiting_approval";
+      reason: string;
+      created_at: string;
+      resolved_at: string | null;
+      raw_response: string | null;
+      resolution: "approved" | "rejected" | null;
+      resolved_by: string | null;
+      resolution_remark: string | null;
+      override_by: string | null;
+    };
+    const settledLedgerRow = {
+      id: settled.id,
+      idempotencyKey: settled.idempotency_key,
+      threadId: settled.thread_id,
+      actionType: settled.action_type,
+      customerId: settled.customer_id,
+      orderId: settled.order_id,
+      amount: settled.amount,
+      currency: settled.currency,
+      status: settled.status,
+      reason: settled.reason,
+      createdAt: settled.created_at,
+      resolvedAt: settled.resolved_at,
+      rawResponse: settled.raw_response,
+      resolution: settled.resolution,
+      resolvedBy: settled.resolved_by,
+      resolutionRemark: settled.resolution_remark,
+      overrideBy: settled.override_by,
+    };
+    expect(settledLedgerRow.resolution).toBe("approved");
+
+    // A second grant attempt (double click, two tabs, a retried request):
+    // must not call the mock API again, must not change the reason, and
+    // must report the same already-settled outcome.
+    const second = await resolveApprovedAction(
+      db,
+      settledLedgerRow,
+      "Second grant attempt",
+      "Exception granted by human reviewer",
+      "reviewer_2",
+      true,
+    );
+    expect(second.status).toBe("succeeded");
+    expect(countPayments(db, "o14", "refund")).toBe(1);
+
+    const after = db.prepare(`SELECT reason, override_by FROM actions_ledger WHERE id = ?`).get(row.id) as {
+      reason: string;
+      override_by: string | null;
+    };
+    expect(after.reason).not.toContain("Second grant attempt");
+    expect(after.override_by).toBe("reviewer_1");
+  });
+});
+
+describe("citesPriorPromise guard (P1-4)", () => {
+  it("blocks all automatic money and denies with 'claimed promise not found in history' when get_conversation_history was not called this turn", async () => {
+    seedOrder(db, "o15", 2000);
+    emitEvent(db, { threadId: "t15", type: "step", payload: { step: "user_message", customerId: "c1" } });
+
+    const result = await runMoneyAction(db, POLICY, {
+      threadId: "t15",
+      customerId: "c1",
+      actionType: "credit",
+      orderId: "o15",
+      amount: 500,
+      reason: "customer claims a prior agent promised this",
+      citesPriorPromise: true,
+    });
+
+    expect(result.status).toBe("denied");
+    if (result.status === "denied") {
+      expect(result.policyReason).toContain("claimed promise not found in history");
+    }
+    expect(countPayments(db, "o15", "credit")).toBe(0);
+  });
+
+  it("proceeds normally (capped amount succeeds) when get_conversation_history was called earlier this turn AND found a hit", async () => {
+    seedOrder(db, "o16", 2000);
+    emitEvent(db, { threadId: "t16", type: "step", payload: { step: "user_message", customerId: "c1" } });
+    emitEvent(db, { threadId: "t16", type: "tool_call", payload: { tool: "get_conversation_history" } });
+    emitEvent(db, { threadId: "t16", type: "tool_result", payload: { tool: "get_conversation_history", count: 1 } });
+
+    const result = await runMoneyAction(db, POLICY, {
+      threadId: "t16",
+      customerId: "c1",
+      actionType: "credit",
+      orderId: "o16",
+      amount: 500,
+      reason: "verified via history",
+      citesPriorPromise: true,
+    });
+
+    expect(result.status).toBe("succeeded");
+    expect(countPayments(db, "o16", "credit")).toBe(1);
+  });
+
+  it("a get_conversation_history call from a PRIOR turn does not satisfy this turn's guard", async () => {
+    seedOrder(db, "o17", 2000);
+    emitEvent(db, { threadId: "t17", type: "tool_call", payload: { tool: "get_conversation_history" } });
+    emitEvent(db, { threadId: "t17", type: "tool_result", payload: { tool: "get_conversation_history", count: 1 } });
+    emitEvent(db, { threadId: "t17", type: "step", payload: { step: "user_message", customerId: "c1" } });
+
+    const result = await runMoneyAction(db, POLICY, {
+      threadId: "t17",
+      customerId: "c1",
+      actionType: "credit",
+      orderId: "o17",
+      amount: 500,
+      reason: "customer claims a prior agent promised this, again",
+      citesPriorPromise: true,
+    });
+
+    expect(result.status).toBe("denied");
+    expect(countPayments(db, "o17", "credit")).toBe(0);
+  });
+
+  // Scenario 22 ("fabricated-promise") regression: the model calls
+  // get_conversation_history in good faith, the lookup genuinely runs, but
+  // it finds nothing relevant (count: 0). Setting citesPriorPromise: true and
+  // calling issue_credit/issue_refund anyway must still be blocked: a call
+  // happening is not evidence, only a call that actually found something is.
+  it("blocks and denies with 'claimed promise not found in history' when get_conversation_history was called this turn but found zero hits", async () => {
+    seedOrder(db, "o18", 2000);
+    emitEvent(db, { threadId: "t18", type: "step", payload: { step: "user_message", customerId: "c1" } });
+    emitEvent(db, { threadId: "t18", type: "tool_call", payload: { tool: "get_conversation_history" } });
+    emitEvent(db, { threadId: "t18", type: "tool_result", payload: { tool: "get_conversation_history", count: 0 } });
+
+    const result = await runMoneyAction(db, POLICY, {
+      threadId: "t18",
+      customerId: "c1",
+      actionType: "credit",
+      orderId: "o18",
+      amount: 500,
+      reason: "customer claims a prior agent promised this, but history search found nothing",
+      citesPriorPromise: true,
+    });
+
+    expect(result.status).toBe("denied");
+    if (result.status === "denied") {
+      expect(result.policyReason).toContain("claimed promise not found in history");
+    }
+    expect(countPayments(db, "o18", "credit")).toBe(0);
   });
 });

@@ -1,6 +1,8 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { runGoldenSetCalibration } from "../../../evals/judge.js";
+import type { ScenarioRecord } from "../../../evals/types.js";
 import {
   ARTIFACTS_DIR,
   REPO_ROOT,
@@ -11,26 +13,33 @@ import {
   groupByScenario,
   listScenarioFiles,
   loadArtifacts,
+  mergeRepeatGroups,
   promptSha256,
+  reconcileExpectedScenarios,
   writeLegacyResults,
   writeRun,
   type EvalRun,
   type EvalRunProvider,
   type EvalRunSource,
+  type EvalScenario,
 } from "./runRecord.js";
 import { lookupModelPricing } from "./pricing.js";
 
 // Runs the eval suite as a child process and turns its artifacts into a run
 // record (plan 007). Used by `npm run eval` (scripts/run-eval.ts, terminal
-// inherited, legacy results.json/RESULTS.md also written) and by the
-// POST /api/evals/runs route (output captured, run record only).
+// inherited, legacy results.json/RESULTS.md also written), by
+// `npm run evals:gate` (scripts/evals-gate.ts, terminal inherited, run
+// record only), and by the POST /api/evals/runs route (output captured, run
+// record only).
 //
-// The child is the exact vitest invocation `npm run eval` has always made:
-// `vitest run --config vitest.eval.config.ts [scenario files]`. It lives for
-// the duration of one suite and is gone afterwards; it is not a second
-// service (CLAUDE.md invariant 3). One run at a time, process-wide: the
-// artifacts directory is shared, so two concurrent suites would interleave
-// their records.
+// Each repeat spawns the exact vitest invocation `npm run eval` has always
+// made: `vitest run --config vitest.eval.config.ts [scenario files]`. Every
+// child lives for the duration of one suite pass and is gone afterwards; it
+// is not a second service (CLAUDE.md invariant 3). One run at a time,
+// process-wide: the artifacts directory is shared, so two concurrent suites
+// (or two repeats of the same suite) would interleave their records, which
+// is exactly why repeats run sequentially, one child at a time, rather than
+// in parallel.
 
 const VITEST_ENTRY = join(REPO_ROOT, "node_modules", "vitest", "vitest.mjs");
 const EVAL_CONFIG = "vitest.eval.config.ts";
@@ -61,8 +70,18 @@ export interface StartEvalRunOptions {
   // "pipe": output is captured into logTail for the UI.
   stdio: "inherit" | "pipe";
   // Also rewrite evals/results.json + evals/RESULTS.md (the regression-gate
-  // snapshot). Only `npm run eval` sets this.
+  // snapshot). Only `npm run eval` sets this; a gate run (npm run
+  // evals:gate) and every UI/subset run leave it false so a broken run can
+  // never silently become the new baseline.
   writeLegacy: boolean;
+  // How many times to run each selected scenario (task P1-6 "repeats").
+  // Defaults to 1: plain `npm run eval` costs and behaves exactly as before
+  // unless a caller opts in. >1 spawns the same vitest invocation that many
+  // times sequentially (never in parallel: see the artifacts-directory note
+  // above), tagging each pass via EVAL_REPEAT_INDEX so the per-scenario
+  // pass/fail across repeats can be reported instead of a single run's
+  // outcome standing in for all of them.
+  repeats?: number;
 }
 
 export interface EvalRunHandle {
@@ -151,11 +170,19 @@ export function startEvalRun(options: StartEvalRunOptions): EvalRunHandle {
   if (!existsSync(VITEST_ENTRY)) {
     throw new Error(`vitest entry not found at ${VITEST_ENTRY}; run npm install first.`);
   }
+  const repeats = Math.max(1, Math.floor(options.repeats ?? 1));
   const scenarioFiles = resolveScenarioFiles(options.scenarioNumbers);
-  const expectedScenarioCount =
-    options.scenarioNumbers === null ? listScenarioFiles().length : options.scenarioNumbers.length;
+  const expectedScenarios =
+    options.scenarioNumbers === null
+      ? listScenarioFiles()
+      : listScenarioFiles().filter((f) => options.scenarioNumbers!.includes(f.number));
+  const expectedScenarioCount = expectedScenarios.length * repeats;
 
   // Stale artifacts from a previous run would be grouped into this one.
+  // Cleared once, before the first repeat: every repeat after that writes
+  // into the same directory (see EVAL_REPEAT_INDEX in evals/harness.ts,
+  // which keeps each repeat's filenames distinct), so a later repeat never
+  // wipes an earlier one's results.
   rmSync(ARTIFACTS_DIR, { recursive: true, force: true });
   mkdirSync(ARTIFACTS_DIR, { recursive: true });
 
@@ -180,6 +207,8 @@ export function startEvalRun(options: StartEvalRunOptions): EvalRunHandle {
     judgeStates: { scored: 0, unscored: 0, notApplicable: 0 },
     scenarios: [],
     pricing: null,
+    incompleteScenarios: [],
+    judgeCalibration: null,
   };
   const logTail: string[] = [];
 
@@ -210,12 +239,26 @@ export function startEvalRun(options: StartEvalRunOptions): EvalRunHandle {
   // win over .env inside the child exactly as they do here.
   env.EVAL_RUN_ID = run.runId;
 
-  const child = spawn(process.execPath, [VITEST_ENTRY, "run", "--config", EVAL_CONFIG, ...scenarioFiles], {
-    cwd: REPO_ROOT,
-    env,
-    stdio: options.stdio === "inherit" ? "inherit" : ["ignore", "pipe", "pipe"],
-    detached: process.platform !== "win32",
-  });
+  // Judge calibration (task P1-6): only for a full-suite run (never a
+  // subset), so the extra dozen short judge calls ride along with the runs
+  // that matter most (the gate snapshot, a UI "run everything", and
+  // evals:gate) without adding cost to every cheap subset spot-check. Uses
+  // the same merged env as the child (`env` above), so a UI run with a
+  // judge override is calibrated against that same judge, not the server
+  // process's default one. Fire-and-forget alongside pricingReady; never
+  // rejects, and a calibration problem can never block or fail the run.
+  const calibrationReady =
+    options.scenarioNumbers === null
+      ? runGoldenSetCalibration(env)
+          .then((calibration) => {
+            run.judgeCalibration = calibration;
+          })
+          .catch((err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            pushLogLines(logTail, `judge calibration failed: ${message}; calibration will be n/a`);
+            console.error(`eval runner: judge calibration failed (${message})`);
+          })
+      : Promise.resolve();
 
   let cancelRequested = false;
   let settled = false;
@@ -224,41 +267,130 @@ export function startEvalRun(options: StartEvalRunOptions): EvalRunHandle {
     resolveDone = resolve;
   });
 
+  // Live progress only: a naive grouping across whatever artifacts exist so
+  // far. During a multi-repeat run this can blend more than one repeat's
+  // records into the same scenario number mid-poll; that is a cosmetic
+  // quirk of the progress view only. The accurate, reconciled-and-merged
+  // final view is computed once in finalizeScenarios below, after every
+  // repeat has actually finished, and that is what gets written to disk.
   const refresh = () => {
     run.scenarios = groupByScenario(loadArtifacts());
     run.judgeStates = countJudgeStates(run.scenarios);
   };
   const poll = setInterval(refresh, POLL_INTERVAL_MS);
 
-  child.stdout?.on("data", (chunk: Buffer) => pushLogLines(logTail, chunk.toString()));
-  child.stderr?.on("data", (chunk: Buffer) => pushLogLines(logTail, chunk.toString()));
+  let currentChild: ChildProcess | null = null;
+  const exitCodes: Array<number | null> = [];
+  let spawnError: Error | null = null;
 
-  const settle = (exitCode: number | null, spawnError: Error | null) => {
+  function spawnOneRepeat(index: number): Promise<void> {
+    return new Promise((resolve) => {
+      const repeatEnv: Record<string, string> = { ...env };
+      if (repeats > 1) {
+        repeatEnv.EVAL_REPEAT_INDEX = String(index);
+        pushLogLines(logTail, `--- repeat ${index}/${repeats} ---`);
+      }
+      const child = spawn(process.execPath, [VITEST_ENTRY, "run", "--config", EVAL_CONFIG, ...scenarioFiles], {
+        cwd: REPO_ROOT,
+        env: repeatEnv,
+        stdio: options.stdio === "inherit" ? "inherit" : ["ignore", "pipe", "pipe"],
+        detached: process.platform !== "win32",
+      });
+      currentChild = child;
+      child.stdout?.on("data", (chunk: Buffer) => pushLogLines(logTail, chunk.toString()));
+      child.stderr?.on("data", (chunk: Buffer) => pushLogLines(logTail, chunk.toString()));
+      child.on("error", (err) => {
+        spawnError = err;
+        currentChild = null;
+        resolve();
+      });
+      // "close" rather than "exit": it fires once the stdio pipes have
+      // drained, so the last reporter lines make it into logTail before the
+      // next repeat starts (or the record is written). For an inherited
+      // stdio it fires at the same point as "exit".
+      child.on("close", (code, signal) => {
+        currentChild = null;
+        exitCodes.push(code ?? (signal ? 1 : null));
+        resolve();
+      });
+    });
+  }
+
+  // Denominator discipline (task P1-6): groups each repeat's own artifacts,
+  // reconciles each against the full expected set (so a crashed/skipped
+  // scenario in ANY repeat is a synthetic fail, never a silently smaller
+  // denominator), then merges the repeats together. Returns crashed: true
+  // only when literally nothing was ever recorded, which is the one case
+  // that must still mean "the suite never ran", not "every scenario failed".
+  function finalizeScenarios(): { scenarios: EvalScenario[]; crashed: boolean; incompleteScenarios: number[] } {
+    const rawRecords = loadArtifacts();
+    if (rawRecords.length === 0) {
+      return { scenarios: [], crashed: true, incompleteScenarios: [] };
+    }
+    const byRepeat = new Map<number, ScenarioRecord[]>();
+    for (const record of rawRecords) {
+      const idx = record.repeatIndex ?? 1;
+      const arr = byRepeat.get(idx) ?? [];
+      arr.push(record);
+      byRepeat.set(idx, arr);
+    }
+    const missing = new Set<number>();
+    const perRepeat: EvalScenario[][] = [];
+    for (let i = 1; i <= repeats; i += 1) {
+      const raw = groupByScenario(byRepeat.get(i) ?? []);
+      const { scenarios, missingNumbers } = reconcileExpectedScenarios(raw, expectedScenarios);
+      for (const n of missingNumbers) missing.add(n);
+      perRepeat.push(scenarios);
+    }
+    return {
+      scenarios: mergeRepeatGroups(perRepeat),
+      crashed: false,
+      incompleteScenarios: [...missing].sort((a, b) => a - b),
+    };
+  }
+
+  function worstExitCode(): number | null {
+    if (exitCodes.length === 0) return null;
+    const nonZero = exitCodes.find((c) => c !== 0);
+    return nonZero !== undefined ? nonZero : 0;
+  }
+
+  const finalize = () => {
     if (settled) return;
     settled = true;
     clearInterval(poll);
-    refresh();
     const finishedAtMs = Date.now();
     run.finishedAt = new Date(finishedAtMs).toISOString();
     run.durationMs = finishedAtMs - startedAtMs;
-    run.exitCode = exitCode;
+    run.exitCode = worstExitCode();
+
     if (cancelRequested) {
       run.status = "cancelled";
+      refresh();
     } else if (spawnError) {
       run.status = "failed";
-      run.failureReason = `Could not start vitest: ${spawnError.message}`;
-    } else if (run.scenarios.length === 0) {
-      // vitest exited without a single scenario artifact: a crash before any
-      // test ran (bad config, missing env), not a suite result.
-      run.status = "failed";
-      run.failureReason =
-        logTail.length > 0
-          ? `vitest exited with code ${exitCode ?? "null"} before any scenario recorded a result. Last output: ${logTail.slice(-8).join(" | ")}`
-          : `vitest exited with code ${exitCode ?? "null"} before any scenario recorded a result.`;
+      run.failureReason = `Could not start vitest: ${(spawnError as Error).message}`;
+      refresh();
     } else {
-      run.status = "completed";
+      const { scenarios, crashed, incompleteScenarios } = finalizeScenarios();
+      if (crashed) {
+        // vitest exited without a single scenario artifact from any repeat:
+        // a crash before any test ran (bad config, missing env), not a
+        // suite result.
+        run.status = "failed";
+        run.failureReason =
+          logTail.length > 0
+            ? `vitest exited with code ${run.exitCode ?? "null"} before any scenario recorded a result. Last output: ${logTail.slice(-8).join(" | ")}`
+            : `vitest exited with code ${run.exitCode ?? "null"} before any scenario recorded a result.`;
+      } else {
+        run.scenarios = scenarios;
+        run.judgeStates = countJudgeStates(scenarios);
+        run.incompleteScenarios = incompleteScenarios;
+        run.status = "completed";
+      }
     }
-    void pricingReady.then(() => {
+
+    void Promise.all([pricingReady, calibrationReady]).then(() => {
       try {
         writeRun(run);
         if (options.writeLegacy && run.status === "completed") writeLegacyResults(run);
@@ -273,11 +405,14 @@ export function startEvalRun(options: StartEvalRunOptions): EvalRunHandle {
     });
   };
 
-  child.on("error", (err) => settle(null, err));
-  // "close" rather than "exit": it fires once the stdio pipes have drained,
-  // so the last reporter lines make it into logTail before the record is
-  // written. For an inherited stdio it fires at the same point as "exit".
-  child.on("close", (code, signal) => settle(code ?? (signal ? 1 : null), null));
+  void (async () => {
+    for (let i = 1; i <= repeats; i += 1) {
+      if (cancelRequested) break;
+      await spawnOneRepeat(i);
+      if (spawnError || cancelRequested) break;
+    }
+    finalize();
+  })();
 
   const handle: EvalRunHandle = {
     run,
@@ -287,7 +422,7 @@ export function startEvalRun(options: StartEvalRunOptions): EvalRunHandle {
       if (settled) return;
       cancelRequested = true;
       pushLogLines(logTail, "cancel requested, stopping vitest");
-      killTree(child, "SIGTERM");
+      if (currentChild) killTree(currentChild, "SIGTERM");
     },
     done,
   };

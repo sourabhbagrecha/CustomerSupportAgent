@@ -36,11 +36,29 @@ export const ARTIFACTS_DIR = join(__dirname, ".artifacts");
 
 export type { ScenarioRecord, ScenarioStatus };
 
+// Repeats (task P1-6): server/src/evals/runner.ts spawns the vitest child
+// once per repeat, setting EVAL_REPEAT_INDEX to a 1-based index for repeat
+// 2 and beyond (never set at all for a plain single run, so
+// process.env.EVAL_REPEAT_INDEX is undefined and REPEAT_INDEX is exactly 1
+// with today's exact behavior/cost). Read once at module load: each repeat
+// is a fresh child process, so this is re-evaluated correctly every time.
+const REPEAT_INDEX = (() => {
+  const raw = process.env.EVAL_REPEAT_INDEX;
+  const n = raw ? Number.parseInt(raw, 10) : 1;
+  return Number.isInteger(n) && n > 0 ? n : 1;
+})();
+
 export function recordScenarioResult(record: ScenarioRecord): void {
   mkdirSync(ARTIFACTS_DIR, { recursive: true });
   const padded = String(record.number).padStart(2, "0");
-  const fileName = record.suffix ? `${padded}-${record.suffix}.json` : `${padded}.json`;
-  writeFileSync(join(ARTIFACTS_DIR, fileName), JSON.stringify(record, null, 2));
+  // Repeat 1 keeps the exact filename a single run has always used (no
+  // collision, since repeats run sequentially and the artifacts directory is
+  // cleared once before the first repeat starts); repeat 2+ gets a distinct
+  // suffix so its artifact does not overwrite an earlier repeat's.
+  const repeatSuffix = REPEAT_INDEX > 1 ? `-r${REPEAT_INDEX}` : "";
+  const fileName = record.suffix ? `${padded}-${record.suffix}${repeatSuffix}.json` : `${padded}${repeatSuffix}.json`;
+  const withRepeat: ScenarioRecord = REPEAT_INDEX > 1 ? { ...record, repeatIndex: REPEAT_INDEX } : record;
+  writeFileSync(join(ARTIFACTS_DIR, fileName), JSON.stringify(withRepeat, null, 2));
 }
 
 // Sums latency/tokens across every llm_call event for a thread. Token counts

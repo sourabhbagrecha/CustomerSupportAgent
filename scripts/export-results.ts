@@ -67,6 +67,12 @@ async function main(): Promise<void> {
     scenarios,
     // Today's OpenRouter price, since the run's own start time is unknown here.
     pricing: await lookupModelPricing(agent.primaryModel ?? null, agent.baseUrl),
+    // This recovery tool rebuilds a record from whatever artifacts are on
+    // disk; it has no notion of "expected" scenarios or a live judge run to
+    // reconcile/calibrate against, so both are left at their neutral values
+    // (task P1-6 added these fields to EvalRun after this script existed).
+    incompleteScenarios: [],
+    judgeCalibration: null,
   };
   const path = writeRun(run);
   writeLegacyResults(run);

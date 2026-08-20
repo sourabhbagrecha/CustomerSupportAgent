@@ -1,11 +1,12 @@
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
-import { SystemMessage, ToolMessage, type AIMessage } from "@langchain/core/messages";
+import { ToolMessage, type AIMessage } from "@langchain/core/messages";
 import type Database from "better-sqlite3";
-import { emitEvent } from "../events/emitter.js";
+import { emitEvent, emitTurnRollup } from "../events/emitter.js";
 import { hasTerminalLedgerRowForThread } from "../ledger/store.js";
 import { AGENT_TOOLS } from "../tools/agentTools.js";
+import { assembleMessages } from "./assembleMessages.js";
 import { callModelWithFailover } from "./modelClient.js";
 import { loadContext } from "./loadContext.js";
 import { SYSTEM_PROMPT } from "./prompt.js";
@@ -62,9 +63,24 @@ export function buildAgentGraph(db: Database.Database) {
   }
 
   async function agentNode(state: AgentState) {
-    const systemMessage = new SystemMessage(`${SYSTEM_PROMPT}\n\n${state.retrievedContextBlock}`);
-    const aiMessage = await callModelWithFailover(db, state.threadId, [systemMessage, ...state.messages], AGENT_TOOLS);
+    // Plan 011: static prompt and volatile retrieved context are separate
+    // messages, assembled per call and never checkpointed, so the provider's
+    // prefix cache covers the prompt plus prior history (see assembleMessages.ts).
+    const messages = assembleMessages(SYSTEM_PROMPT, state.retrievedContextBlock, state.messages);
+    const aiMessage = await callModelWithFailover(db, state.threadId, messages, AGENT_TOOLS);
     const resolutionStatus = nextResolutionStatus(state, aiMessage);
+    // P2-9: no tool calls means routeAfterAgent below sends this turn to END
+    // next, on both the normal path and after an approval resume re-enters
+    // this node, so it is the one place that reliably knows "the turn is
+    // over" and can close it out with a rollup event. Fired, not awaited:
+    // emitTurnRollup prices the turn against OpenRouter's model listing
+    // (server/src/evals/pricing.ts), and the customer-facing reply must
+    // never wait on that network call or degrade if it is unreachable.
+    // emitTurnRollup swallows its own errors into an `error` event and never
+    // rejects, so there is nothing to catch here.
+    if (!hasToolCalls(aiMessage)) {
+      void emitTurnRollup(db, state.threadId);
+    }
     return { messages: [aiMessage], resolutionStatus };
   }
 

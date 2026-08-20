@@ -65,18 +65,27 @@ export async function runTurn(params: {
 }
 
 // Resumes a thread paused at an issue_refund/issue_credit interrupt() with a
-// human approve/reject decision from the approval panel.
+// human approve/reject decision from the approval panel. P0-3: internalNote
+// (audit-only) and customerNote (relayed to the customer via notify.ts) are
+// carried as two independent fields all the way through, never merged.
 export async function resumeApprovalTurn(params: {
   db: Database.Database;
   graph: AgentGraph;
   threadId: string;
   customerId: string;
   decision: "approve" | "reject";
-  remark?: string | null;
+  internalNote?: string | null;
+  customerNote?: string | null;
 }): Promise<RunTurnResult> {
   try {
     const state = (await params.graph.invoke(
-      new Command({ resume: { decision: params.decision, remark: params.remark ?? null } }),
+      new Command({
+        resume: {
+          decision: params.decision,
+          internalNote: params.internalNote ?? null,
+          customerNote: params.customerNote ?? null,
+        },
+      }),
       config(params.threadId, params.db),
     )) as AgentState;
     return extractResult(params.db, params.threadId, state);

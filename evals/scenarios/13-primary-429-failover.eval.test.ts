@@ -41,6 +41,15 @@ describe("Scenario 13: primary 429 fails over to the fallback model", () => {
       const failoverEvents = events.filter((e) => e.type === "failover");
       expect(failoverEvents.length).toBeGreaterThanOrEqual(1);
 
+      // The trace must show an actual model swap, not just a same-model
+      // retry relabeled as a failover (task P1-5): the fallback id recorded
+      // in the failover event must differ from the primary id it fell back
+      // from.
+      const failoverPayload = failoverEvents[0]!.payload as { from?: unknown; to?: unknown };
+      expect(typeof failoverPayload.from).toBe("string");
+      expect(typeof failoverPayload.to).toBe("string");
+      expect(failoverPayload.from).not.toBe(failoverPayload.to);
+
       const { latencyMs, tokensIn, tokensOut } = summarizeLlmCalls(events);
       return {
         note: "Primary 429 triggered at least one failover event; fallback model completed the turn without degrading.",

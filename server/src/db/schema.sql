@@ -193,7 +193,25 @@ CREATE TABLE actions_ledger (
   reason          TEXT NOT NULL,
   created_at      TEXT NOT NULL,
   resolved_at     TEXT,
-  raw_response    TEXT
+  raw_response    TEXT,
+  -- Human-resolution metadata (P0-1 hardening), distinct from the
+  -- policy-engine-authored `reason` above. Populated exactly once, the first
+  -- (and only) time a human resolves this row via the approval/escalation
+  -- queue; a row whose `resolution` is already non-NULL is settled and must
+  -- never be re-executed or have `reason` overwritten again (see
+  -- resolveApprovedAction / resolveRejectedAction in ledger/pipeline.ts,
+  -- which both check this before acting). NULL on every row a human never
+  -- touched, i.e. every row the policy engine resolved on its own.
+  resolution        TEXT CHECK (resolution IN ('approved', 'rejected')),
+  resolved_by       TEXT,
+  resolution_remark TEXT,
+  -- Set only when a human granted money that the policy engine itself never
+  -- approved (an escalation "grant exception" on a denied/awaiting_approval
+  -- row created outside the normal allow/requires_approval verdict path):
+  -- records who authorized bypassing the policy engine. NULL for every row
+  -- that moved through the normal auto-allow or human-approved-the-normal-cap
+  -- paths.
+  override_by       TEXT
 );
 
 CREATE INDEX idx_ledger_thread ON actions_ledger(thread_id);
@@ -240,7 +258,12 @@ CREATE TABLE approvals (
   denial_reason TEXT,
   category      TEXT,
   context       TEXT,
+  -- `remark` (P0-3 hardening) is the reviewer's INTERNAL note: audit-only,
+  -- never sent to the customer. `customer_note` is the separate, optional
+  -- customer-facing explanation that notify.ts actually relays (after a
+  -- wordlist profanity backstop); the two must never be conflated again.
   remark        TEXT,
+  customer_note TEXT,
   status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at    TEXT NOT NULL,
   resolved_at   TEXT,
