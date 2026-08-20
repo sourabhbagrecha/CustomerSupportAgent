@@ -6,6 +6,8 @@ This page is the map. The reasoning lives in [`docs/`](docs/): [architecture](do
 
 ## Quickstart
 
+Requires Node.js (v20 or later) and npm, plus an OpenAI API key.
+
 ```bash
 npm install           # download every dependency in package.json into node_modules, once after cloning
 cp .env.example .env  # cp copies a file: source first, destination second, creating your local .env
